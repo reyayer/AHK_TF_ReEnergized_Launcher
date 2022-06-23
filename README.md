@@ -1,5 +1,8 @@
-# AHK Luancher for the Steam version of the TF ReEngergized project.
+# AHK Luancher for the Steam version of
+# the TF ReEngergized project.
 A quick and simple launcher for the ReEngergized project. Built with AHK
+
+Download just click: https://github.com/SoraHjort/AHK_TF_ReEnergized_Launcher/raw/main/TransformersLaunch.ahk
 
 Requires you to install AutoHotKey, so nab the current version (not the v2 beta) from https://www.autohotkey.com/ or https://github.com/Lexikos/AutoHotkey_L/releases
 
