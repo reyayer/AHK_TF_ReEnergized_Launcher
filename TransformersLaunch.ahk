@@ -5,6 +5,15 @@ SetTitleMatchMode 2
 ;Script by Sora Hjort
 ;ahk_class LaunchUnrealUWindowsClient
 
+
+;	Restart script in admin mode if needed.
+; https://www.autohotkey.com/boards/viewtopic.php?p=405208#p405208
+	if not A_IsAdmin
+	{
+		Run *RunAs "%A_AhkPath%" /restart "%A_ScriptFullPath%"
+		ExitApp
+	}
+
 ini = %A_ScriptDir%\TFLaunch.ini
 
 
@@ -28,6 +37,10 @@ Signed Sora Hjort
 Select the game you wish to launch!
 )
 
+;Read the ini and fix any erroneous values.
+
+;Auto Close?
+
 IniRead, AutoClose, %ini%, Launch, AutoClose, True
 
 If AutoClose = True
@@ -38,6 +51,9 @@ If AutoClose = True
     AutoClose = False
     ACloseChecked =
     }
+
+
+;Borderless Mode enabled?
 
 IniRead, BorderlessEnabled, %ini%, Launch, BorderlessEnabled, True
 
@@ -51,6 +67,8 @@ If BorderlessEnabled = True
     }
 
 
+;FOC and WFC need differing delays before engaging borderless due to load times.
+
 IniRead, FOCDelay, %ini%, Launch, FOCDelay, 10
 If FOCDelay =
     {
@@ -63,6 +81,10 @@ If WFCDelay =
     WFCDelay = 15
     }
     
+    
+
+;Create the Gui!
+
 Gui, Font, s16
 Gui, Add, Text, , %TxtBlock%
 
@@ -84,6 +106,7 @@ Gui, Show, xcenter ycenter h130 AutoSize, ReEnergized Steam Launcher
 Return
 
 
+;WFC's block
 
 WFC:
 gosub Read
@@ -112,6 +135,9 @@ else
     }
 return
 gosub EOF
+
+
+;FOC's Block
 
 FOC:
 gosub Read
@@ -149,11 +175,17 @@ Borderless:
     DllCall("SetMenu", "Ptr", WinExist(), "Ptr", 0)
 return
 
+
+;Closing out
+
 Cancel:
 gosub Read
 gosub Save
 gosub FIN
 return
+
+
+;Read controls
 
 Read:
 
@@ -177,6 +209,9 @@ GuiControlGet, BEnableTester,, BEnable
 
 return
 
+
+;Save to ini
+
 Save:
         
 
@@ -193,9 +228,13 @@ if (AutoCloseTester == 1)
         }
 return
 
+
+;Exit
 FIN:
 ExitApp
 return
 
+
+;Should never reach here
 EOF:
 return
