@@ -7,12 +7,20 @@ SetTitleMatchMode 2
 
 
 ;	Restart script in admin mode if needed.
-; https://www.autohotkey.com/boards/viewtopic.php?p=405208#p405208
-	if not A_IsAdmin
-	{
-		Run *RunAs "%A_AhkPath%" /restart "%A_ScriptFullPath%"
-		ExitApp
-	}
+
+	full_command_line := DllCall("GetCommandLine", "str")
+
+if not (A_IsAdmin or RegExMatch(full_command_line, " /restart(?!\S)"))
+{
+    try
+    {
+        if A_IsCompiled
+            Run *RunAs "%A_ScriptFullPath%" /restart
+        else
+            Run *RunAs "%A_AhkPath%" /restart "%A_ScriptFullPath%"
+    }
+    ExitApp
+}
 
 ini = %A_ScriptDir%\TFLaunch.ini
 
