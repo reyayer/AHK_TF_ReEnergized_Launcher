@@ -1,4 +1,4 @@
-#SingleInstance Force
+#SingleInstance off
 SendMode Input
 SetWorkingDir %A_ScriptDir%
 SetTitleMatchMode 2
@@ -7,6 +7,10 @@ SetTitleMatchMode 2
 
 
 ;	Restart script in admin mode if needed.
+if (%0% > 0)
+	{
+	Launch = %1%
+	}
 
 	full_command_line := DllCall("GetCommandLine", "str")
 
@@ -15,9 +19,9 @@ if not (A_IsAdmin or RegExMatch(full_command_line, " /restart(?!\S)"))
     try
     {
         if A_IsCompiled
-            Run *RunAs "%A_ScriptFullPath%" /restart
+            Run *RunAs "%A_ScriptFullPath%" %1% /restart
         else
-            Run *RunAs "%A_AhkPath%" /restart "%A_ScriptFullPath%"
+            Run *RunAs "%A_AhkPath%" /restart "%A_ScriptFullPath%" %1%
     }
     ExitApp
 }
@@ -28,15 +32,15 @@ ini = %A_ScriptDir%\TFLaunch.ini
 TxtBlock =
 (
 Welcome to the ReEngergized Launcher Helper for Steam!
-Make sure you have the .reg files inthe same folder 
-as this program. They need to be the same name as
-they were given to you by the bot!
 
-If you have not, then please go follow the instructions
-in the install guide. It's over on the discord server!
+Make sure you have the .reg files inthe same folder as this program.
+They need to be the same name as they were given to you by the bot!
 
-P.S. This launcher and the registry files can be stored
-anywhere, as long as they're in the same folder!
+If you have not, then please go follow the instructionsin the
+install guide. It's over on the discord server!
+
+P.S. This launcher and the registry files can be stored anywhere,
+as long as they're in the same folder!
 
 Signed Sora Hjort
 
@@ -91,25 +95,46 @@ If WFCDelay =
     
     
 
+;Launch Parameters
+    
+if (Launch == "FOC") {
+    gosub FOC
+    gosub FIN
+    return
+    }
+
+if (Launch == "WFC") {
+    gosub WFC
+    gosub FIN
+    return
+    }
+    
+    
+    
+FileCreateShortcut, %A_ScriptFullPath%, LaunchFOC.lnk,, FOC
+FileCreateShortcut, %A_ScriptFullPath%, LaunchWFC.lnk,, WFC
+
 ;Create the Gui!
 
 Gui, Font, s16
 Gui, Add, Text, , %TxtBlock%
 
-Gui, Add, Button, gWFC, &1. War For Cybertron
-Gui, Add, Button, gFOC, &2. Fall Of Cybertron
-Gui, Add, Button, gCancel, &3. Close
 gui, add, text,,
 
 gui, Add, CheckBox, vBEnable %BCloseChecked%, Enable Borderless Fullscreen? (Experimental)
-Gui, add, Text,, [WFC] Delay to auto activate Borderless (Seconds):
-Gui, Add, Edit
+Gui, add, Text,, Adjust delay (in Seconds). If it doesn't work properly, try increasing.
+Gui, add, Text,, [WFC] Delay:
+Gui, Add, Edit, w60 yp xp+130
 Gui, Add, UpDown, vWFCDelay range0-100, %WFCDelay%
-Gui, add, Text,, [FOC] Delay to auto activate Borderless (Seconds):
-Gui, Add, Edit
+Gui, add, Text,yp xp+100, [FOC] Delay:
+Gui, Add, Edit, w60 yp xp+130
 Gui, Add, UpDown, vFOCDelay range0-100, %FOCDelay%
 
-gui, Add, CheckBox, vAClose %ACloseChecked%, Automatically Close Launcher?
+Gui, Add, Button, w220 gWFC yp+50 xp-370, &1. War For Cybertron
+Gui, Add, Button, yp xp+230 w220 gFOC, &2. Fall Of Cybertron
+Gui, Add, Button, yp xp+230 w220 gCancel, &3. Close
+gui, add, text,,
+gui, Add, CheckBox, xp-450 vAClose %ACloseChecked%, Automatically Close Launcher?
 Gui, Show, xcenter ycenter h130 AutoSize, ReEnergized Steam Launcher
 Return
 
@@ -238,6 +263,8 @@ return
 
 
 ;Exit
+GuiClose:
+GuiEscape:
 FIN:
 ExitApp
 return
