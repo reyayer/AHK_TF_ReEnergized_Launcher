@@ -1,7 +1,11 @@
-﻿#SingleInstance Force
+#SingleInstance Force
 SendMode Input
 SetWorkingDir %A_ScriptDir%
+SetTitleMatchMode 2
 ;Script by Sora Hjort
+;ahk_class LaunchUnrealUWindowsClient
+
+ini = %A_ScriptDir%\TFLaunch.ini
 
 
 TxtBlock =
@@ -24,23 +28,81 @@ Signed Sora Hjort
 Select the game you wish to launch!
 )
 
-Gui, Font, s20
+IniRead, AutoClose, %ini%, Launch, AutoClose, True
+
+If AutoClose = True
+    {
+    AutoClose = True
+    ACloseChecked := "Checked"
+} else {
+    AutoClose = False
+    ACloseChecked =
+    }
+
+IniRead, BorderlessEnabled, %ini%, Launch, BorderlessEnabled, True
+
+If BorderlessEnabled = True
+    {
+    BorderlessEnabled = True
+    BCloseChecked := "Checked"
+} else {
+    BorderlessEnabled = False
+    BCloseChecked =
+    }
+
+
+IniRead, FOCDelay, %ini%, Launch, FOCDelay, 10
+If FOCDelay =
+    {
+    FOCDelay = 10
+    }
+
+IniRead, WFCDelay, %ini%, Launch, WFCDelay, 15
+If WFCDelay =
+    {
+    WFCDelay = 15
+    }
+    
+Gui, Font, s16
 Gui, Add, Text, , %TxtBlock%
 
 Gui, Add, Button, gWFC, &1. War For Cybertron
 Gui, Add, Button, gFOC, &2. Fall Of Cybertron
-Gui, Add, Button, gCancel, &3. Cancel
+Gui, Add, Button, gCancel, &3. Close
+gui, add, text,,
+
+gui, Add, CheckBox, vBEnable %BCloseChecked%, Enable Borderless Fullscreen? (Experimental)
+Gui, add, Text,, [WFC] Delay to auto activate Borderless (Seconds):
+Gui, Add, Edit
+Gui, Add, UpDown, vWFCDelay range0-100, %WFCDelay%
+Gui, add, Text,, [FOC] Delay to auto activate Borderless (Seconds):
+Gui, Add, Edit
+Gui, Add, UpDown, vFOCDelay range0-100, %FOCDelay%
+
+gui, Add, CheckBox, vAClose %ACloseChecked%, Automatically Close Launcher?
 Gui, Show, xcenter ycenter h130 AutoSize, ReEnergized Steam Launcher
 Return
 
 
+
 WFC:
+gosub Read
+SecMult := WFCDelay * 1000
+game := "ahk_exe TWFC.exe"
 if FileExist("tfcwfc_pc.reg") {
     run steam://run/42650
-    gui, Hide
-    WinWait ahk_exe TWFC.exe
+    WinWait %game%
     RunWait reg import tfcwfc_pc.reg
-    gosub FIN
+    WinActivate %game%
+    sleep, %SecMult%
+    #If WinActive(%game%)
+        {
+        if (BorderlessEnabled == "True")
+            {
+            gosub Borderless
+            }
+        }
+    gosub Save
     return
     }
 else
@@ -49,8 +111,13 @@ else
     return
     }
 return
+gosub EOF
 
 FOC:
+gosub Read
+SecMult := FOCDelay * 1000
+game := "ahk_exe TFOC.exe"
+game2 := "TFOC.exe"
 if !FileExist("tfcfoc_pc.reg") {
     MsgBox FOC CDKey Registry not found in launcher's directory, be sure to follow the instructions! You didn't rename it, did you?
     return
@@ -58,18 +125,77 @@ if !FileExist("tfcfoc_pc.reg") {
 else
     {
     run steam://run/213120
-    gui, Hide
-    WinWait ahk_exe TFOC.exe
-    RunWait reg import tfcfoc_pc.reg
-    gosub FIN
+    WinWait %game%
+    Run reg import tfcfoc_pc.reg
+    WinActivate %game%
+    sleep, %SecMult%
+    #If WinActive(%game%)
+        {
+        if (BorderlessEnabled == "True")
+            {
+            gosub Borderless
+            }
+        }
+    gosub Save
     return
     }
 return
+gosub EOF
 
-Cancel:
-goto FIN
+Borderless:
+    WinActivate %game%
+    WinSet, Style, -0xC40000, %game%
+    WinMove, %game%, , 0, 0, A_ScreenWidth, A_ScreenHeight
+    DllCall("SetMenu", "Ptr", WinExist(), "Ptr", 0)
 return
 
+Cancel:
+gosub Read
+gosub Save
+gosub FIN
+return
+
+Read:
+
+GuiControlGet, FOCDelay,, FOCDelay
+GuiControlGet, WFCDelay,, WFCDelay
+GuiControlGet, AutoCloseTester,, AClose
+    If (AutoCloseTester == 0)
+        {
+        AutoClose = False
+        } else {
+        AutoClose = True
+        }
+
+GuiControlGet, BEnableTester,, BEnable
+    If (BEnableTester == 0)
+        {
+        BorderlessEnabled = False
+        } else {
+        BorderlessEnabled = True
+        }
+
+return
+
+Save:
+        
+
+IniWrite, %BorderlessEnabled%, %ini%, Launch, BorderlessEnabled
+IniWrite, %WFCDelay%, %ini%, Launch, WFCDelay
+IniWrite, %FOCDelay%, %ini%, Launch, FOCDelay
+IniWrite, %AutoClose%, %ini%, Launch, AutoClose
+if (AutoCloseTester == 1)
+        {
+        gui, Hide
+        ExitSleep := SecMult + 10000
+        sleep, %ExitSleep%
+        gosub FIN
+        }
+return
 
 FIN:
 ExitApp
+return
+
+EOF:
+return
