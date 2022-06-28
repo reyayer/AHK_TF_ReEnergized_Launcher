@@ -1,3 +1,5 @@
+﻿WinClose, % "ahk_id " Instances%A_Index%
+
 ;@Ahk2Exe-SetMainIcon matrix.ico
 FileInstall, imgs/TFLaunchGUI.png, imgs/TFLaunchGUI.png
 FileInstall, imgs/matrixdim.png, imgs/matrixdim.png
@@ -10,13 +12,14 @@ SetTitleMatchMode 2
 ;Script by Sora Hjort
 
 
-version := 20220627.161100
+version := 20220627.214000
+
+
+Launch = %1%
+
+
 
 ;	Restart script in admin mode if needed.
-if (%0% > 0)
-	{
-	Launch = %1%
-	}
 
 	full_command_line := DllCall("GetCommandLine", "str")
 
@@ -34,8 +37,83 @@ if not (A_IsAdmin or RegExMatch(full_command_line, " /restart(?!\S)"))
 
 
 
+
+;Version Check
+
+FileReadLine, VerFile, ./version, 1
+
+If (VerFile <= version)
+    {
+    FileDelete, ./version
+    FileAppend, %version%, ./version 
+    }
+    
+;Read the ini and fix any erroneous values.
 ini = %A_ScriptDir%\TFLaunch.ini
 
+IniRead, LastCheck, %ini%, Update, LastCheck, 0
+IniRead, CheckForUpdates, %ini%, Update, CheckForUpdates, False
+
+
+;Auto Close?
+
+IniRead, AutoClose, %ini%, Launch, AutoClose, True
+
+If AutoClose = True
+    {
+    AutoClose = True
+    ACloseChecked := "Checked"
+} else {
+    AutoClose = False
+    ACloseChecked =
+    }
+
+
+;Borderless Mode enabled?
+
+IniRead, BorderlessEnabled, %ini%, Launch, BorderlessEnabled, True
+
+If BorderlessEnabled = True
+    {
+    BorderlessEnabled = True
+    BCloseChecked := "Checked"
+} else {
+    BorderlessEnabled = False
+    BCloseChecked =
+    }
+
+
+;FOC and WFC need differing delays before engaging borderless due to load times.
+
+IniRead, FOCDelay, %ini%, Launch, FOCDelay, 10
+If FOCDelay =
+    {
+    FOCDelay = 10
+    }
+
+IniRead, WFCDelay, %ini%, Launch, WFCDelay, 15
+If WFCDelay =
+    {
+    WFCDelay = 15
+    }
+    
+    
+
+;Launch Parameters
+    
+if (Launch == "FOC" or Launch == "foc") {
+    gosub FOC
+    gosub FIN
+    return
+    }
+
+if (Launch == "WFC" or Launch == "wfc") {
+    gosub WFC
+    gosub FIN
+    return
+    }
+    
+    
 First := FileExist("TFLaunch.ini")
 MainImg := FileExist("imgs/TFLaunchGUI.png")
 DimImg := FileExist("imgs/matrixdim.png")
@@ -66,9 +144,36 @@ If (IcoImg == "A")
 
 menu, tray, nostandard
 menu, tray, add, E&xit,FIN
+    
+    
+FileCreateShortcut, %A_ScriptFullPath%, LaunchFOC.lnk,, FOC
+FileCreateShortcut, %A_ScriptFullPath%, LaunchWFC.lnk,, WFC
 
 
+;Check for updates function
 
+FormatTime, time, A_now, yyyyMMdd
+
+if (LastCheck < time)
+    {
+    If CheckForUpdates = True
+        {
+        UrlDownloadToFile, https://raw.githubusercontent.com/SoraHjort/AHK_TF_ReEnergized_Launcher/main/version, ./updateCheck
+        FileReadLine, updateCheck, ./updateCheck, 1
+        FileDelete, ./updateCheck
+        If (version <= updateCheck)
+            {
+            UpdateMsg =
+(
+There is an update available! 
+Current:   v%version%  
+Updated: v%updateCheck%
+Check the github for the update!
+)
+            MsgBox %UpdateMsg%
+            }
+        }
+    }
 
 
 ;First Launch text box
@@ -133,71 +238,6 @@ Select the game you wish to launch!
 
 
 
-;Read the ini and fix any erroneous values.
-
-;Auto Close?
-
-IniRead, AutoClose, %ini%, Launch, AutoClose, True
-
-If AutoClose = True
-    {
-    AutoClose = True
-    ACloseChecked := "Checked"
-} else {
-    AutoClose = False
-    ACloseChecked =
-    }
-
-
-;Borderless Mode enabled?
-
-IniRead, BorderlessEnabled, %ini%, Launch, BorderlessEnabled, True
-
-If BorderlessEnabled = True
-    {
-    BorderlessEnabled = True
-    BCloseChecked := "Checked"
-} else {
-    BorderlessEnabled = False
-    BCloseChecked =
-    }
-
-
-;FOC and WFC need differing delays before engaging borderless due to load times.
-
-IniRead, FOCDelay, %ini%, Launch, FOCDelay, 10
-If FOCDelay =
-    {
-    FOCDelay = 10
-    }
-
-IniRead, WFCDelay, %ini%, Launch, WFCDelay, 15
-If WFCDelay =
-    {
-    WFCDelay = 15
-    }
-    
-    
-
-;Launch Parameters
-    
-if (Launch == "FOC") {
-    gosub FOC
-    gosub FIN
-    return
-    }
-
-if (Launch == "WFC") {
-    gosub WFC
-    gosub FIN
-    return
-    }
-    
-    
-    
-FileCreateShortcut, %A_ScriptFullPath%, LaunchFOC.lnk,, FOC
-FileCreateShortcut, %A_ScriptFullPath%, LaunchWFC.lnk,, WFC
-
 
 ;Create the Gui!
 
@@ -216,35 +256,36 @@ Cybertron
 Gui, New, ,ReEnergized Steam Launcher
 Gui, Margin ,0,0
 Gui, add, picture, xm0 ym0 w960 h540 BackgroundTrans, imgs/TFLaunchGUI.png
-Gui, Font, s16 cWhite, Arial
+
+gui, color, 0x000000
+Gui, Font, s16 c39ff14, Arial
+
+Gui, Add, Button, xm+10 ym+500 w140 h30 gHelp , &Help
+
+Gui, Add, Text, xm345 ym470 , Delay:
+Gui, Add, Text, xm345 ym500 , (In Seconds)
 
 
-Gui, Add, Button, xm+10 ym+500 w140 h30 gHelp BackgroundTrans, &Help
+Gui, Add, Button, xm+170 ym+460 w150 h70 gWFC , %WFCBlock%
 
-Gui, Add, Text, xm345 ym470 BackgroundTrans, Delay:
-Gui, Add, Text, xm345 ym500 BackgroundTrans, (In Seconds)
-
-
-Gui, Add, Button, xm+170 ym+460 w150 h70 gWFC BackgroundTrans, %WFCBlock%
-
-Gui, Add, Edit, BackgroundTrans w70 xm410 ym470 h30 +Center
+Gui, Add, Edit,  w70 xm410 ym470 h30 +Center
 Gui, Add, UpDown, vWFCDelay range0-100 wrap, %WFCDelay%
 
 
-Gui, Add, Text, xm665 ym470 BackgroundTrans, Delay:
-Gui, Add, Text, xm665 ym500 BackgroundTrans, (In Seconds)
+Gui, Add, Text, xm665 ym470 , Delay:
+Gui, Add, Text, xm665 ym500 , (In Seconds)
 
-Gui, Add, Button, xm+490 ym+460 w150 h70 gFOC BackgroundTrans, %FOCBlock%
+Gui, Add, Button, xm+490 ym+460 w150 h70 gFOC , %FOCBlock%
 
-Gui, Add, Edit, BackgroundTrans w70 xm730 ym470 h30 +Center
+Gui, Add, Edit,  w70 xm730 ym470 h30 +Center
 Gui, Add, UpDown, vFOCDelay range0-100 wrap, %FOCDelay%
 
-Gui, Add, Button, xm+810 ym+460 w140 h70 gCancel BackgroundTrans, &Close
+Gui, Add, Button, xm+810 ym+460 w140 h70 gCancel , &Close
 
 
-gui, Add, CheckBox, vBEnable %BCloseChecked% xm0 ym400 BackgroundTrans, Enable Borderless Fullscreen? (Experimental)
+gui, Add, CheckBox, vBEnable %BCloseChecked% xm0 ym400 , Enable Borderless Fullscreen? (Experimental)
 
-gui, Add, CheckBox, xm0 ym430 vAClose %ACloseChecked% BackgroundTrans, Automatically Close Launcher?
+gui, Add, CheckBox, xm0 ym430 vAClose %ACloseChecked% , Automatically Close Launcher?
 
 GuiControl, Focus, Help
 
@@ -253,8 +294,9 @@ Gui, Show, xcenter ycenter h130 AutoSize, ReEnergized Steam Launcher
 If (First != "A")
     {
     Gui, First:new,,First ReEnergized
-    Gui, Font, s16 cWhite, Arial
-    Gui, Add, Text,w960 wrap, %FirstBlock%
+    gui, color, 0x000000
+    Gui, Font, s16 c39ff14, Arial
+    Gui, Add, Text,w960 wrap BackgroundTrans, %FirstBlock%
     Gui, First:Show, xcenter ycenter 
     }
 Return
@@ -266,7 +308,7 @@ Gui, Help:New,,Launcher Help
 Gui, Margin ,20,20
 Gui, add, picture, +Center xm64 ym64 w512 BackgroundTrans,  imgs/matrixdim.png
 gui, color, 0x000000
-Gui, Font, s16 cWhite, Arial
+Gui, Font, s16 c39ff14, Arial
 Gui, Add, Text, W640 xm0 ym0 wrap BackgroundTrans, %HelpBlock%
 Gui, Add, Button, gHelpGuiClose, &Close
 Gui, Help:Show
@@ -280,6 +322,7 @@ SecMult := WFCDelay * 1000
 game := "ahk_exe TWFC.exe"
 if FileExist("tfcwfc_pc.reg") {
     run steam://run/42650
+    gosub Save
     WinWait %game%
     RunWait reg import tfcwfc_pc.reg
     WinActivate %game%
@@ -291,7 +334,6 @@ if FileExist("tfcwfc_pc.reg") {
             gosub Borderless
             }
         }
-    gosub Save
     return
     }
 else
@@ -317,6 +359,7 @@ if !FileExist("tfcfoc_pc.reg") {
 else
     {
     run steam://run/213120
+    gosub Save
     WinWait %game%
     Run reg import tfcfoc_pc.reg
     WinActivate %game%
@@ -328,7 +371,6 @@ else
             gosub Borderless
             }
         }
-    gosub Save
     return
     }
 return
@@ -336,6 +378,7 @@ gosub EOF
 
 Borderless:
     WinActivate %game%
+    WinSet, Style, -0xC00000, %game%
     WinSet, Style, -0xC40000, %game%
     WinMove, %game%, , 0, 0, A_ScreenWidth, A_ScreenHeight
     DllCall("SetMenu", "Ptr", WinExist(), "Ptr", 0)
@@ -385,6 +428,8 @@ IniWrite, %BorderlessEnabled%, %ini%, Launch, BorderlessEnabled
 IniWrite, %WFCDelay%, %ini%, Launch, WFCDelay
 IniWrite, %FOCDelay%, %ini%, Launch, FOCDelay
 IniWrite, %AutoClose%, %ini%, Launch, AutoClose
+IniWrite, %time%, %ini%, Update, LastCheck
+IniWrite, %CheckForUpdates%, %ini%, Update, CheckForUpdates
 if (AutoCloseTester == 1)
         {
         gui, Hide
