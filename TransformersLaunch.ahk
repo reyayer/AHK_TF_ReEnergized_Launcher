@@ -11,12 +11,14 @@ SetWorkingDir %A_ScriptDir%
 SetTitleMatchMode 2
 ;Script by Sora Hjort
 
+version := 20220630.162500
 
-version := 20220627.214000
-
+nil := ""
 
 Launch = %1%
 
+menu, tray, nostandard
+menu, tray, add, E&xit,FIN
 
 
 ;	Restart script in admin mode if needed.
@@ -50,14 +52,13 @@ If (VerFile <= version)
     
 ;Read the ini and fix any erroneous values.
 ini = %A_ScriptDir%\TFLaunch.ini
+gosub IniReader
 
-IniRead, LastCheck, %ini%, Update, LastCheck, 0
-IniRead, CheckForUpdates, %ini%, Update, CheckForUpdates, False
 
 
 ;Auto Close?
 
-IniRead, AutoClose, %ini%, Launch, AutoClose, True
+
 
 If AutoClose = True
     {
@@ -71,7 +72,6 @@ If AutoClose = True
 
 ;Borderless Mode enabled?
 
-IniRead, BorderlessEnabled, %ini%, Launch, BorderlessEnabled, True
 
 If BorderlessEnabled = True
     {
@@ -82,21 +82,64 @@ If BorderlessEnabled = True
     BCloseChecked =
     }
 
+;Check for updates?
+
+If CheckForUpdates = True
+    {
+    CheckForUpdates = True
+    UpdateChecker := "Checked"
+} else {
+    CheckForUpdates = False
+    UpdateChecker =
+    }
 
 ;FOC and WFC need differing delays before engaging borderless due to load times.
 
-IniRead, FOCDelay, %ini%, Launch, FOCDelay, 10
-If FOCDelay =
+
+If FOCDelay = nil
     {
     FOCDelay = 10
     }
 
-IniRead, WFCDelay, %ini%, Launch, WFCDelay, 15
-If WFCDelay =
+
+If WFCDelay = nil
     {
     WFCDelay = 15
     }
     
+    
+;Check WFC and FOC paths in ini
+
+CfgPath := "TransGame\Config\PC\Cooked"
+WFCCfgPath = %WFCPath%%CfgPath%
+FOCCfgPath = %FOCPath%%CfgPath%
+
+if (WFCPath = 0 or WFCPath = nil) {
+    WFCList := "Launch WFC once first"
+    WFCCFGSel := 1
+    WFCFirst := True
+    } else {
+    Tag := "WFC"
+    WFCFirst := False
+    gosub ConfigRead
+    }
+
+
+
+
+if (FOCPath = 0 or FOCPath = nil) {
+    FOCList := "Launch FOC once first"
+    FOCCFGSel := 1
+    FOCFirst := True
+    } else {
+    Tag := "FOC"
+    FOCFirst := False
+    gosub ConfigRead
+    }
+    
+    
+
+;MsgBox %FOCConfig% %WFCConfig%
     
 
 ;Launch Parameters
@@ -126,24 +169,21 @@ IfNotExist, ./imgs
 
 If (MainImg != "A")
     {
-    UrlDownloadToFile, https://github.com/SoraHjort/AHK_TF_ReEnergized_Launcher/raw/main/imgs/TFLaunchGUI.png, ./imgs/TFLaunchGui.png
+    gosub DownMain
     }
 If (DimImg != "A")
     {
-    UrlDownloadToFile, https://raw.githubusercontent.com/SoraHjort/AHK_TF_ReEnergized_Launcher/main/imgs/matrixdim.png, ./imgs/matrixdim.png
+    gosub DownDim
     }
 If (IcoImg != "A")
     {
-    UrlDownloadToFile, https://raw.githubusercontent.com/SoraHjort/AHK_TF_ReEnergized_Launcher/main/imgs/matrix.ico, ./imgs/matrix.ico
+    gosub DownIco
     }
 
 If (IcoImg == "A")
     {
     menu, tray, icon, imgs/matrix.ico
     }
-
-menu, tray, nostandard
-menu, tray, add, E&xit,FIN
     
     
 FileCreateShortcut, %A_ScriptFullPath%, LaunchFOC.lnk,, FOC
@@ -221,7 +261,7 @@ Note: If you're running the AHK script version of the launcher instead of the EX
 
 TxtBlock =
 (
-Welcome to the ReEngergized Launcher Helper for Steam!
+Welcome to the ReEnergized Launcher Helper for Steam!
 
 Make sure you have the .reg files inthe same folder as this program. They need to be the same name as they were given to you by the bot!
 
@@ -235,7 +275,6 @@ Signed Sora Hjort
 
 Select the game you wish to launch!
 )
-
 
 
 
@@ -253,7 +292,7 @@ FOCBlock =
 Cybertron
 )
 
-Gui, New, ,ReEnergized Steam Launcher
+Gui, Main:New, ,ReEnergized Steam Launcher
 Gui, Margin ,0,0
 Gui, add, picture, xm0 ym0 w960 h540 BackgroundTrans, imgs/TFLaunchGUI.png
 
@@ -285,21 +324,33 @@ Gui, Add, Button, xm+810 ym+460 w140 h70 gCancel , &Close
 
 gui, Add, CheckBox, vBEnable %BCloseChecked% xm0 ym400 , Enable Borderless Fullscreen? (Experimental)
 
-gui, Add, CheckBox, xm0 ym430 vAClose %ACloseChecked% , Automatically Close Launcher?
+gui, Add, CheckBox, xm0 ym430 vAutoCloseTester %ACloseChecked% , Automatically Close Launcher?
 
 GuiControl, Focus, Help
 
 
-Gui, Show, xcenter ycenter h130 AutoSize, ReEnergized Steam Launcher
 If (First != "A")
     {
+    gosub FirstRun
+    gosub FinishGui
     Gui, First:new,,First ReEnergized
     gui, color, 0x000000
     Gui, Font, s16 c39ff14, Arial
     Gui, Add, Text,w960 wrap BackgroundTrans, %FirstBlock%
     Gui, First:Show, xcenter ycenter 
+    } else {
+    gosub FinishGui
     }
 Return
+
+
+FinishGui:
+    Gui, Main:Font, s12
+    gui, Main:Add, CheckBox, xm750 ym90 vUpdateEnable %UpdateChecker%, Check updates daily?
+    gui, Main:add, DropDownList, vWFCConfig xm750 ym10 w200 Choose%WFCCFGSel%, %WFCList%
+    gui, Main:add, DropDownList, vFOCConfig xm750 ym50 w200 Choose%FOCCFGSel%, %FOCList%
+    Gui, Main:Show, xcenter ycenter h130 AutoSize, ReEnergized Steam Launcher
+return
 
 
 
@@ -320,20 +371,29 @@ WFC:
 gosub Read
 SecMult := WFCDelay * 1000
 game := "ahk_exe TWFC.exe"
+Stub := "WFC"
+StubLong := "War For Cybertron"
+If (WFCFirst = True)
+    {
+    gosub FirstLaunch
+    }
+WFCSub:
+WFCCfgPath = %WFCPath%%CfgPath%
 if FileExist("tfcwfc_pc.reg") {
+    FileCopy, %A_ScriptDir%\configs\%WFCConfig%, %WFCCfgPath%\Coalesced.ini, 1
     run steam://run/42650
-    gosub Save
     WinWait %game%
     RunWait reg import tfcwfc_pc.reg
-    WinActivate %game%
     sleep, %SecMult%
+    WinActivate %game%
     #If WinActive(%game%)
         {
-        if (BorderlessEnabled == "True")
+        if (BorderlessEnabled = "True")
             {
             gosub Borderless
             }
         }
+    gosub Save
     return
     }
 else
@@ -351,37 +411,79 @@ FOC:
 gosub Read
 SecMult := FOCDelay * 1000
 game := "ahk_exe TFOC.exe"
-game2 := "TFOC.exe"
+Stub := "FOC"
+StubLong := "Fall Of Cybertron"
+If (FOCFirst = True)
+    {
+    gosub FirstLaunch
+    }
+FOCSub:
+FOCCfgPath = %FOCPath%%CfgPath%
 if !FileExist("tfcfoc_pc.reg") {
     MsgBox FOC CDKey Registry not found in launcher's directory, be sure to follow the instructions! You didn't rename it, did you?
     return
     } 
 else
     {
+    FileCopy, %A_ScriptDir%\configs\%FOCConfig%, %FOCCfgPath%\Coalesced.ini, 1
     run steam://run/213120
-    gosub Save
     WinWait %game%
     Run reg import tfcfoc_pc.reg
-    WinActivate %game%
     sleep, %SecMult%
+    WinActivate %game%
     #If WinActive(%game%)
         {
-        if (BorderlessEnabled == "True")
+        if (BorderlessEnabled = "True")
             {
             gosub Borderless
             }
         }
-    return
+    gosub Save
     }
 return
 gosub EOF
 
 Borderless:
+
     WinActivate %game%
-    WinSet, Style, -0xC00000, %game%
-    WinSet, Style, -0xC40000, %game%
     WinMove, %game%, , 0, 0, A_ScreenWidth, A_ScreenHeight
-    DllCall("SetMenu", "Ptr", WinExist(), "Ptr", 0)
+    WinSet, Style, 0x140A0000, %game%
+    WinSet, Style, -0xC00000, %game%
+    WinSet, Style, -0x800000, %game%
+    WinSet, Style, -0x40000, %game%
+    WinSet, Style, -0x400000, %game%
+    WinSet, Style, -0x0, %game%
+    WinSet, Style, -0x80880000, %game%
+    ;WinSet, Redraw, , %game%
+    ;WinHide, %game%
+    ;WinShow, %game%
+    ;WinMove, %game%, , 0, 0, A_ScreenWidth, A_ScreenHeight
+    WinSet, Redraw,, %game%
+    ;DllCall("SetMenu", "Ptr", WinExist(), "Ptr", 0)
+
+
+    ;WinActivate %game%
+    ;WinMove, %game%, , 10, 10, (A_ScreenWidth - 10), (A_ScreenHeight - 10)
+    ;WinSet, Style, +0xC00000, %game%
+    ;WinSet, Style, +0xC40000, %game%
+    ;WinSet, Style, +0x40000, %game%
+    ;WinSet, Style, +0x800000, %game%
+    
+    ;WinSet, ExStyle, -0x00000200, %game%
+    ;WinSet, Style, -0xC00000, %game%
+    ;msgbox c0
+    ;WinSet, Style, -0xC40000, %game%
+    ;WinSet, ExStyle, -0x00000200, %game%
+    ;WinSet, Style, -0x840000, %game%
+    ;msgbox c4
+    ;WinSet, Style, -0x40000, %game%
+    ;msgbox 04
+    ;WinSet, Style, -0x800000, %game%
+    ;msgbox 80
+    ;WinSet, Style, -0xC00000, %game%
+    ;WinMaximize, %game%
+    ;DllCall("SetMenu", "Ptr", WinExist(), "Ptr", 0)
+    ;WinMove, %game%, , 0, 0, A_ScreenWidth, A_ScreenHeight
 return
 
 
@@ -394,26 +496,49 @@ gosub FIN
 return
 
 
+;Read the Ini Files
+
+IniReader:
+IniRead, FOCPath, %ini%, Launch, FOCPath, 0
+IniRead, WFCConfig, %ini%, launch, WFCConfig, "WFC.ReEnergized.ini"
+IniRead, FOCConfig, %ini%, launch, FOCConfig, "FOC.ReEnergized.ini"
+IniRead, LastCheck, %ini%, Update, LastCheck, 0
+IniRead, CheckForUpdates, %ini%, Update, CheckForUpdates, 0
+IniRead, AutoClose, %ini%, Launch, AutoClose, True
+IniRead, BorderlessEnabled, %ini%, Launch, BorderlessEnabled, 0
+IniRead, FOCDelay, %ini%, Launch, FOCDelay, 10
+IniRead, WFCDelay, %ini%, Launch, WFCDelay, 15
+IniRead, WFCPath, %ini%, Launch, WFCPath, 0
+return
+
+
 ;Read controls
 
 Read:
 
-GuiControlGet, FOCDelay,, FOCDelay
-GuiControlGet, WFCDelay,, WFCDelay
-GuiControlGet, AutoCloseTester,, AClose
-    If (AutoCloseTester == 0)
+Gui, Main:Submit, NoHide
+
+;MsgBox %FOCConfig% %FOCDelay% %WFCDelay%
+    If (AutoCloseTester = 0)
         {
         AutoClose = False
         } else {
         AutoClose = True
         }
 
-GuiControlGet, BEnableTester,, BEnable
-    If (BEnableTester == 0)
+;GuiControlGet, BEnableTester,, BEnable
+    If (BEnable = 0)
         {
         BorderlessEnabled = False
         } else {
         BorderlessEnabled = True
+        }
+
+    If (UpdateEnable = 0)
+        {
+        CheckForUpdates = False
+        } else {
+        CheckForUpdates = True
         }
 
 return
@@ -422,21 +547,84 @@ return
 ;Save to ini
 
 Save:
-        
+
+Gui, Main:Submit, NoHide
+
+if (WFCConfig = "Launch WFC once first")
+    {
+    WFCConfig := "WFC.ReEnergized.ini"
+    }
+if (FOCConfig = "Launch FOC once first")
+    {
+    FOCConfig := "FOC.ReEnergized.ini"
+    }
+
+if (Stub = "FOC" or Stub = "WFC")
+    {
+    WinGet, GamePath, ProcessPath, %game%
+
+    GamePath := StrReplace(GamePath, "Binaries\TFOC.exe")
+    GamePath := StrReplace(GamePath, "Binaries\TWFC.exe")
+
+    IniWrite, %GamePath%, %ini%, Launch, %Stub%Path
+    }
 
 IniWrite, %BorderlessEnabled%, %ini%, Launch, BorderlessEnabled
 IniWrite, %WFCDelay%, %ini%, Launch, WFCDelay
 IniWrite, %FOCDelay%, %ini%, Launch, FOCDelay
 IniWrite, %AutoClose%, %ini%, Launch, AutoClose
+IniWrite, %WFCConfig%, %ini%, Launch, WFCConfig
+IniWrite, %FOCConfig%, %ini%, Launch, FOCConfig
 IniWrite, %time%, %ini%, Update, LastCheck
 IniWrite, %CheckForUpdates%, %ini%, Update, CheckForUpdates
-if (AutoCloseTester == 1)
+
+if (Stub = "FOC")
+    {
+    if (FOCFirst = True)
         {
-        gui, Hide
-        ExitSleep := SecMult + 10000
-        sleep, %ExitSleep%
+        Tag := "FOC"
+        WinGet, PID, PID, %game%
+        Process, Close, %PID%
+        gosub ConfigRead
+        gosub IniReader
+        FOCFirst := False
+        FOCConfig := FOCCfgDef
+        FOCCFGNum := 2
+        RestartQ := True
+        goto FOCSub
+        return
+        }
+    }
+    
+if (Stub = "WFC")
+    {
+    if (WFCFirst = True)
+        {
+        Tag := "WFC"
+        WinGet, PID, PID, %game%
+        Process, Close, %PID%
+        gosub ConfigRead
+        gosub IniReader
+        WFCFirst := False
+        WFCConfig := WFCCfgDef
+        WFCCFGNum := 2
+        RestartQ := True
+        goto WFCSub
+        return
+        }
+    }
+    WinActivate, %game%
+    Gui, Launch:Destroy
+if (AutoCloseTester = 1)
+        {
+        gui, Main:Hide
+        sleep, 1000
         gosub FIN
         }
+if (AutoCloseTester = 0 and RestartQ = True)
+    {
+    goto FirstRestart
+    }
 return
 
 FirstGuiClose:
@@ -449,13 +637,244 @@ HelpGuiEscape:
 gui, Help:hide
 return
 
+FirstLaunch:
+
+FirstBlock =
+(
+Please hold why we launch %StubLong%,
+kill the game, then relaunch it for you.
+
+This should only occur during the first launch of
+%StubLong%.
+
+Don't worry, your old Coalesced.ini files for
+%StubLong% are being backed up. They'll
+show up in the Config Selection dropdown boxes
+labeled as "%Stub%.Backup.ini".
+
+If you did any custom changes to the config file
+prior, you may want to go into the configs folder
+and rename it. Remember to keep the %Stub% prefix
+and the .ini extension.
+)
+
+Gui, Launch:new
+Gui, +AlwaysOnTop -caption
+gui, font,s16
+Gui, add, text,, %FirstBlock%
+gui, Launch:show
+return
+
+;Download sub sections
+
+DownMain:
+UrlDownloadToFile, https://github.com/SoraHjort/AHK_TF_ReEnergized_Launcher/raw/main/imgs/TFLaunchGUI.png, ./imgs/TFLaunchGui.png
+return
+
+DownDim:
+UrlDownloadToFile, https://raw.githubusercontent.com/SoraHjort/AHK_TF_ReEnergized_Launcher/main/imgs/matrixdim.png, ./imgs/matrixdim.png
+return
+
+DownIco:
+UrlDownloadToFile, https://raw.githubusercontent.com/SoraHjort/AHK_TF_ReEnergized_Launcher/main/imgs/matrix.ico, ./imgs/matrix.ico
+return
+
+;download the ReEnergized basic configs 
+
+DownConfigs:
+DownBlock =
+(
+Now downloading config files. Please hold.
+
+This message will disappear when the
+downloads are completed.
+)
+Gui, Down:New
+Gui, Font, s16
+Gui, add, text,, %DownBlock%
+Gui, show
+UrlDownloadToFile, https://wiki.aiwarehouse.xyz/guides/tfcwfc_pc_guide/coalesced.ini, ./configs/WFC.ReEnergized.ini
+UrlDownloadToFile, https://wiki.aiwarehouse.xyz/guides/tfcfoc_guide/coalesced.ini, ./configs/FOC.ReEnergized.ini
+Gui, Down:Destroy
+return
+
+;Make a backup of the configs incase of overwriting concerns
+
+BackupConfigs:
+gosub IniReader
+WFCCfgPath = %WFCPath%%CfgPath%
+FOCCfgPath = %FOCPath%%CfgPath%
+sleep 50
+FileCopy, %FOCCfgPath%\Coalesced.ini, %A_ScriptDir%\configs\FOC.Backup.ini
+sleep 50
+FileCopy, %WFCCfgPath%\Coalesced.ini, %A_ScriptDir%\configs\WFC.Backup.ini
+sleep 50
+FileCopy, %FOCCfgPath%\Coalesced.ini, %A_ScriptDir%\configs\FOC.Backup.ini
+sleep 50
+FileCopy, %WFCCfgPath%\Coalesced.ini, %A_ScriptDir%\configs\WFC.Backup.ini
+
+BackupBlock =
+(
+The old Coalesced.ini files for WFC and FOC
+have been backed up. They'll show up in the
+dropdown boxes labeled as "backup".
+
+Sorry if you see this message multiple times.
+The backup process can be a little finicky a
+few times.
+)
+;MsgBox %BackupBlock%
+return
+
+
+;List the configs in the configs folder
+
+ConfigRead:
+
+FOCArray := []
+WFCArray := []
+
+WFCCfgDef := "WFC.ReEnergized.ini"
+FOCCfgDef := "FOC.ReEnergized.ini"
+
+IfNotExist, ./configs
+        {
+        FileCreateDir, ./configs
+        }
+
+CountWithMe := 0
+
+
+Loop, ./configs/%Tag%*.ini
+{
+    If (Tag = "FOC") {
+        If (CountWithMe > 0) {
+            FOCList = %FOCList%|%A_LoopFileName%
+            AddCfg = %A_LoopFileName%
+            FOCArray.push(AddCfg)
+            ;msgbox 1 %AddCfg%
+            ;msgbox % FOCArray[A_Index]
+            } else {
+            FOCList = %FOCList%%A_LoopFileName%
+            AddCfg = %A_LoopFileName%
+            FOCArray.push(AddCfg)
+            ;msgbox 2 %AddCfg%
+            }
+    } else if (Tag = "WFC") {
+        If (CountWithMe > 0) {
+            WFCList = %WFCList%|%A_LoopFileName%
+            AddCfg = %A_LoopFileName%
+            WFCArray.push(AddCfg)
+            ;msgbox 3 %AddCfg%
+            } else {
+            WFCList = %WFCList%%A_LoopFileName%
+            AddCfg = %A_LoopFileName%
+            WFCArray.push(AddCfg)
+            ;msgbox 4 %AddCfg%
+            }
+        }
+    
+    CountWithMe++
+}
+
+;MsgBox %CountWithMe%
+
+If CountWithMe <= 0
+    {
+    FileCreateDir, ./configs
+    gosub DownConfigs
+    goto ConfigRead
+    return
+    }
+
+If CountWithMe <= 1
+    {
+    FileCreateDir, ./configs
+    gosub BackupConfigs
+    goto ConfigRead
+    return
+    }
+
+If (Tag = "WFC") {
+    loop % WFCArray.length()
+        {
+        WFCTest = % WFCArray[A_Index]
+        WFCCFGNum++
+        if (WFCTest = WFCConfig) {
+            WFCCFGSel := WFCCFGNum
+            }
+        if (WFCTest = WFCCfgDef) {
+            WFCCFGDefSel := WFCCFGNum
+            }
+        }
+}
+
+If (Tag = "FOC") {
+    loop % FOCArray.length()
+        {
+        ;msgbox 1
+        FOCTest = % FOCArray[A_Index]
+        FOCCFGNum++
+        if (FOCTest = FOCConfig) {
+            ;msgbox 2
+            FOCCFGSel := FOCCFGNum
+            }
+        if (FOCTest = FOCCfgDef) {
+            FOCCFGDefSel := FOCCFGNum
+            }
+        }
+}
+;msgbox test %FOCCFGSel%
+If (FOCCFGSel = "")
+    {
+    FOCCFGSel := FOCCFGDefSel
+    ;MsgBox FOCTest %FOCCFGSel%
+    }
+    
+If (WFCCFGSel = "")
+    {
+    WFCCFGSel := WFCCFGDefSel
+    ;MsgBox WFCTest %WFCCFGSel%
+    }
+return
+
+
+;First Run Section
+FirstRun:
+FileCreateDir, ./configs
+;gosub BackupConfigs
+gosub DownConfigs
+return
+
+
 
 ;Exit
-GuiClose:
-GuiEscape:
+MainGuiClose:
+MainGuiEscape:
 FIN:
 ExitApp
 return
+
+FirstRestart:
+RestartBlock =
+(
+Due to you turning off the auto close launcher before
+the first time setup of launching %StubLong%,
+the launcher will now restart. This does mean it will
+bring itself infront of the game. 
+
+This should only occur this one time from launching
+%StubLong%. 
+)
+    MsgBox, %RestartBlock%
+    try
+    {
+        if A_IsCompiled
+            Run *RunAs "%A_ScriptFullPath%" %1% /restart
+        else
+            Run *RunAs "%A_AhkPath%" /restart "%A_ScriptFullPath%" %1%
+    }
+    ExitApp
 
 
 ;Should never reach here
