@@ -1,4 +1,4 @@
-﻿WinClose, % "ahk_id " Instances%A_Index%
+WinClose, % "ahk_id " Instances%A_Index%
 
 ;@Ahk2Exe-SetMainIcon matrix.ico
 FileInstall, imgs/TFLaunchGUI.png, imgs/TFLaunchGUI.png
@@ -11,7 +11,7 @@ SetWorkingDir %A_ScriptDir%
 SetTitleMatchMode 2
 ;Script by Sora Hjort
 
-version := 20220630.162500
+version := 20220701.000000
 
 nil := ""
 
@@ -44,7 +44,7 @@ if not (A_IsAdmin or RegExMatch(full_command_line, " /restart(?!\S)"))
 
 FileReadLine, VerFile, ./version, 1
 
-If (VerFile <= version)
+If (VerFile < version)
     {
     FileDelete, ./version
     FileAppend, %version%, ./version 
@@ -72,6 +72,22 @@ If AutoClose = True
 
 ;Borderless Mode enabled?
 
+If Borderless = Disabled
+    {
+    BModeNum := 1
+    }
+If Borderless = 0
+    {
+    BModeNum := 1
+    }
+If Borderless = Mode1
+    {
+    BModeNum := 2
+    }
+If Borderless = Mode2
+    {
+    BModeNum := 3
+    }
 
 If BorderlessEnabled = True
     {
@@ -111,8 +127,6 @@ If WFCDelay = nil
 ;Check WFC and FOC paths in ini
 
 CfgPath := "TransGame\Config\PC\Cooked"
-WFCCfgPath = %WFCPath%%CfgPath%
-FOCCfgPath = %FOCPath%%CfgPath%
 
 if (WFCPath = 0 or WFCPath = nil) {
     WFCList := "Launch WFC once first"
@@ -137,9 +151,10 @@ if (FOCPath = 0 or FOCPath = nil) {
     gosub ConfigRead
     }
     
-    
+WFCCfgPath = %WFCPath%%CfgPath%
+FOCCfgPath = %FOCPath%%CfgPath%
 
-;MsgBox %FOCConfig% %WFCConfig%
+
     
 
 ;Launch Parameters
@@ -201,7 +216,7 @@ if (LastCheck < time)
         UrlDownloadToFile, https://raw.githubusercontent.com/SoraHjort/AHK_TF_ReEnergized_Launcher/main/version, ./updateCheck
         FileReadLine, updateCheck, ./updateCheck, 1
         FileDelete, ./updateCheck
-        If (version <= updateCheck)
+        If (version < updateCheck)
             {
             UpdateMsg =
 (
@@ -241,7 +256,7 @@ HelpBlock =
 (
 This launcher still needs you to grab the Coalesced.ini from the Discord Server.
 
-The reg files "tfcwfc_pc.reg" and "tfcfoc_pc.reg" must be in the same folder as the launcher. The launcher will yell at you if you did not do this.
+The reg files "%WFCReg%" and "%FOCReg%" must be in the same folder as the launcher. The launcher will yell at you if you did not do this.
 
 The Borderless mode does require you to run the game in windowed mode.
 
@@ -292,6 +307,10 @@ FOCBlock =
 Cybertron
 )
 
+
+WFCReg := "tfcwfc_pc.reg"
+FOCReg := "tfcfoc_pc.reg"
+
 Gui, Main:New, ,ReEnergized Steam Launcher
 Gui, Margin ,0,0
 Gui, add, picture, xm0 ym0 w960 h540 BackgroundTrans, imgs/TFLaunchGUI.png
@@ -322,9 +341,9 @@ Gui, Add, UpDown, vFOCDelay range0-100 wrap, %FOCDelay%
 Gui, Add, Button, xm+810 ym+460 w140 h70 gCancel , &Close
 
 
-gui, Add, CheckBox, vBEnable %BCloseChecked% xm0 ym400 , Enable Borderless Fullscreen? (Experimental)
 
-gui, Add, CheckBox, xm0 ym430 vAutoCloseTester %ACloseChecked% , Automatically Close Launcher?
+;gui, Add, CheckBox, vBEnable %BCloseChecked% xm0 ym400 , Enable Borderless Fullscreen? (Experimental)
+
 
 GuiControl, Focus, Help
 
@@ -346,9 +365,13 @@ Return
 
 FinishGui:
     Gui, Main:Font, s12
-    gui, Main:Add, CheckBox, xm750 ym90 vUpdateEnable %UpdateChecker%, Check updates daily?
     gui, Main:add, DropDownList, vWFCConfig xm750 ym10 w200 Choose%WFCCFGSel%, %WFCList%
     gui, Main:add, DropDownList, vFOCConfig xm750 ym50 w200 Choose%FOCCFGSel%, %FOCList%
+    gui, Add, DropDownList, vBorderless Choose%BModeNum% xm750 ym90 w200 , Borderless Disabled|Borderless Mode1|Borderless Mode2
+    
+    gui, Add, CheckBox, xm750 ym130 vAutoCloseTester %ACloseChecked% , Auto-Close Launcher?
+    gui, Main:Add, CheckBox, xm750 ym150 vUpdateEnable %UpdateChecker%, Check updates daily?
+    
     Gui, Main:Show, xcenter ycenter h130 AutoSize, ReEnergized Steam Launcher
 return
 
@@ -373,32 +396,33 @@ SecMult := WFCDelay * 1000
 game := "ahk_exe TWFC.exe"
 Stub := "WFC"
 StubLong := "War For Cybertron"
+WFCSub:
+WFCCfgPath = %WFCPath%%CfgPath%
+WFCRegPath = regs/%WFCReg%
+if !FileExist(WFCRegPath)
+    {
+    gosub MissingReg
+    return
+    }
 If (WFCFirst = True)
     {
     gosub FirstLaunch
     }
-WFCSub:
-WFCCfgPath = %WFCPath%%CfgPath%
-if FileExist("tfcwfc_pc.reg") {
+if FileExist(WFCRegPath) {
     FileCopy, %A_ScriptDir%\configs\%WFCConfig%, %WFCCfgPath%\Coalesced.ini, 1
     run steam://run/42650
     WinWait %game%
-    RunWait reg import tfcwfc_pc.reg
-    sleep, %SecMult%
+    RunWait reg import %WFCRegPath%
     WinActivate %game%
     #If WinActive(%game%)
         {
-        if (BorderlessEnabled = "True")
+        if (Borderless != "Disabled")
             {
-            gosub Borderless
+            sleep, %SecMult%
+            gosub Borderless%Borderless%
             }
         }
     gosub Save
-    return
-    }
-else
-    {
-    MsgBox WFC CDKey Registry not found in launcher's directory, be sure to follow the instructions! You didn't rename it, did you?
     return
     }
 return
@@ -413,29 +437,29 @@ SecMult := FOCDelay * 1000
 game := "ahk_exe TFOC.exe"
 Stub := "FOC"
 StubLong := "Fall Of Cybertron"
+FOCSub:
+FOCCfgPath = %FOCPath%%CfgPath%
+FOCRegPath = regs/%FOCReg%
+if !FileExist(FOCRegPath) {
+    gosub MissingReg
+    return
+    }
 If (FOCFirst = True)
     {
     gosub FirstLaunch
     }
-FOCSub:
-FOCCfgPath = %FOCPath%%CfgPath%
-if !FileExist("tfcfoc_pc.reg") {
-    MsgBox FOC CDKey Registry not found in launcher's directory, be sure to follow the instructions! You didn't rename it, did you?
-    return
-    } 
-else
-    {
+if FileExist(FOCRegPath) {
     FileCopy, %A_ScriptDir%\configs\%FOCConfig%, %FOCCfgPath%\Coalesced.ini, 1
     run steam://run/213120
     WinWait %game%
-    Run reg import tfcfoc_pc.reg
-    sleep, %SecMult%
+    Run reg import %FOCRegPath%
     WinActivate %game%
     #If WinActive(%game%)
         {
-        if (BorderlessEnabled = "True")
+        if (Borderless != "Disabled")
             {
-            gosub Borderless
+            sleep, %SecMult%
+            gosub Borderless%Borderless%
             }
         }
     gosub Save
@@ -445,7 +469,28 @@ gosub EOF
 
 Borderless:
 
-    WinActivate %game%
+
+    ;WinMove, %game%, , 0, 0, A_ScreenWidth, A_ScreenHeight
+    ;WinSet, Style, 0x140A0000, %game%
+    ;WinSet, Style, -0xC00000, %game%
+    ;WinSet, Style, -0x800000, %game%
+    ;WinSet, Style, -0x40000, %game%
+    ;WinSet, Style, -0x400000, %game%
+    ;WinSet, Style, -0x0, %game%
+    ;WinSet, Style, -0x80880000, %game%
+    ;WinSet, Redraw, , %game%
+    ;WinHide, %game%
+    ;WinShow, %game%
+    ;WinMove, %game%, , 0, 0, A_ScreenWidth, A_ScreenHeight
+    ;WinSet, Redraw,, %game%
+    ;DllCall("SetMenu", "Ptr", WinExist(), "Ptr", 0)
+
+return
+
+
+BorderlessMode1:
+
+
     WinMove, %game%, , 0, 0, A_ScreenWidth, A_ScreenHeight
     WinSet, Style, 0x140A0000, %game%
     WinSet, Style, -0xC00000, %game%
@@ -454,36 +499,19 @@ Borderless:
     WinSet, Style, -0x400000, %game%
     WinSet, Style, -0x0, %game%
     WinSet, Style, -0x80880000, %game%
-    ;WinSet, Redraw, , %game%
-    ;WinHide, %game%
-    ;WinShow, %game%
-    ;WinMove, %game%, , 0, 0, A_ScreenWidth, A_ScreenHeight
     WinSet, Redraw,, %game%
-    ;DllCall("SetMenu", "Ptr", WinExist(), "Ptr", 0)
+
+return
 
 
-    ;WinActivate %game%
-    ;WinMove, %game%, , 10, 10, (A_ScreenWidth - 10), (A_ScreenHeight - 10)
-    ;WinSet, Style, +0xC00000, %game%
-    ;WinSet, Style, +0xC40000, %game%
-    ;WinSet, Style, +0x40000, %game%
-    ;WinSet, Style, +0x800000, %game%
-    
-    ;WinSet, ExStyle, -0x00000200, %game%
-    ;WinSet, Style, -0xC00000, %game%
-    ;msgbox c0
-    ;WinSet, Style, -0xC40000, %game%
-    ;WinSet, ExStyle, -0x00000200, %game%
-    ;WinSet, Style, -0x840000, %game%
-    ;msgbox c4
-    ;WinSet, Style, -0x40000, %game%
-    ;msgbox 04
-    ;WinSet, Style, -0x800000, %game%
-    ;msgbox 80
-    ;WinSet, Style, -0xC00000, %game%
-    ;WinMaximize, %game%
-    ;DllCall("SetMenu", "Ptr", WinExist(), "Ptr", 0)
-    ;WinMove, %game%, , 0, 0, A_ScreenWidth, A_ScreenHeight
+
+BorderlessMode2:
+
+    WinActivate %game%
+    WinSet, Style, -0xC40000, %game%
+    WinMove, %game%, , 0, 0, A_ScreenWidth, A_ScreenHeight
+    DllCall("SetMenu", "Ptr", WinExist(), "Ptr", 0)
+
 return
 
 
@@ -506,6 +534,7 @@ IniRead, LastCheck, %ini%, Update, LastCheck, 0
 IniRead, CheckForUpdates, %ini%, Update, CheckForUpdates, 0
 IniRead, AutoClose, %ini%, Launch, AutoClose, True
 IniRead, BorderlessEnabled, %ini%, Launch, BorderlessEnabled, 0
+IniRead, Borderless, %ini%, Launch, Borderless, 0
 IniRead, FOCDelay, %ini%, Launch, FOCDelay, 10
 IniRead, WFCDelay, %ini%, Launch, WFCDelay, 15
 IniRead, WFCPath, %ini%, Launch, WFCPath, 0
@@ -540,6 +569,8 @@ Gui, Main:Submit, NoHide
         } else {
         CheckForUpdates = True
         }
+BCut := "Borderless "
+StringReplace, Borderless, Borderless, %BCut%,,
 
 return
 
@@ -568,8 +599,10 @@ if (Stub = "FOC" or Stub = "WFC")
 
     IniWrite, %GamePath%, %ini%, Launch, %Stub%Path
     }
-
+StringReplace, Borderless, Borderless, %BCut%,,
+    
 IniWrite, %BorderlessEnabled%, %ini%, Launch, BorderlessEnabled
+IniWrite, %Borderless%, %ini%, Launch, Borderless
 IniWrite, %WFCDelay%, %ini%, Launch, WFCDelay
 IniWrite, %FOCDelay%, %ini%, Launch, FOCDelay
 IniWrite, %AutoClose%, %ini%, Launch, AutoClose
@@ -645,7 +678,11 @@ Please hold why we launch %StubLong%,
 kill the game, then relaunch it for you.
 
 This should only occur during the first launch of
-%StubLong%.
+%StubLong%. If this occurs after that, 
+it just means the launcher's config ran into a
+slight error during a previous launch.
+
+Anyway!
 
 Don't worry, your old Coalesced.ini files for
 %StubLong% are being backed up. They'll
@@ -677,6 +714,7 @@ return
 
 DownIco:
 UrlDownloadToFile, https://raw.githubusercontent.com/SoraHjort/AHK_TF_ReEnergized_Launcher/main/imgs/matrix.ico, ./imgs/matrix.ico
+menu, tray, icon, imgs/matrix.ico
 return
 
 ;download the ReEnergized basic configs 
@@ -760,7 +798,8 @@ Loop, ./configs/%Tag%*.ini
             FOCArray.push(AddCfg)
             ;msgbox 2 %AddCfg%
             }
-    } else if (Tag = "WFC") {
+    }
+    if (Tag = "WFC") {
         If (CountWithMe > 0) {
             WFCList = %WFCList%|%A_LoopFileName%
             AddCfg = %A_LoopFileName%
@@ -796,6 +835,8 @@ If CountWithMe <= 1
     }
 
 If (Tag = "WFC") {
+    WFCList = %WFCList%|!/:WFC.Overwrite.Off:\!
+    WFCArray.push("!/:WFC.Overwrite.Off:\!")
     loop % WFCArray.length()
         {
         WFCTest = % WFCArray[A_Index]
@@ -810,6 +851,11 @@ If (Tag = "WFC") {
 }
 
 If (Tag = "FOC") {
+    FOCList = %FOCList%|<--------------------->
+    FOCArray.push("<--------------------->")
+    
+    FOCList = %FOCList%|!/:FOC.Overwrite.Off:\!
+    FOCArray.push("!/:FOC.Overwrite.Off:\!")
     loop % FOCArray.length()
         {
         ;msgbox 1
@@ -836,12 +882,14 @@ If (WFCCFGSel = "")
     WFCCFGSel := WFCCFGDefSel
     ;MsgBox WFCTest %WFCCFGSel%
     }
+
 return
 
 
 ;First Run Section
 FirstRun:
 FileCreateDir, ./configs
+FileCreateDir, ./regs
 ;gosub BackupConfigs
 gosub DownConfigs
 return
@@ -875,6 +923,25 @@ This should only occur this one time from launching
             Run *RunAs "%A_AhkPath%" /restart "%A_ScriptFullPath%" %1%
     }
     ExitApp
+
+
+MissingReg:
+run, explorer .\regs
+WinWaitActive, ahk_exe explorer.exe
+WinMove,,, 0, 0, 600, 600
+MissingRegBlock =
+(
+%Stub% CDKey Registry File not found in launcher's directory,
+be sure to follow the instructions!
+
+You didn't rename it, did you?
+
+Anyway, I've opened the file explorer to where you should put
+it, so throw the reg file into it.
+)
+
+MsgBox %MissingRegBlock%
+return
 
 
 ;Should never reach here
