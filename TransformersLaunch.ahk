@@ -1,4 +1,4 @@
-WinClose, % "ahk_id " Instances%A_Index%
+﻿WinClose, % "ahk_id " Instances%A_Index%
 
 ;@Ahk2Exe-SetMainIcon matrix.ico
 FileInstall, imgs/TFLaunchGUI.png, imgs/TFLaunchGUI.png
@@ -11,7 +11,7 @@ SetWorkingDir %A_ScriptDir%
 SetTitleMatchMode 2
 ;Script by Sora Hjort
 
-version := 20220701.000000
+version := 20220701.010800
 
 nil := ""
 
@@ -53,106 +53,7 @@ If (VerFile < version)
 ;Read the ini and fix any erroneous values.
 ini = %A_ScriptDir%\TFLaunch.ini
 gosub IniReader
-
-
-
-;Auto Close?
-
-
-
-If AutoClose = True
-    {
-    AutoClose = True
-    ACloseChecked := "Checked"
-} else {
-    AutoClose = False
-    ACloseChecked =
-    }
-
-
-;Borderless Mode enabled?
-
-If Borderless = Disabled
-    {
-    BModeNum := 1
-    }
-If Borderless = 0
-    {
-    BModeNum := 1
-    }
-If Borderless = Mode1
-    {
-    BModeNum := 2
-    }
-If Borderless = Mode2
-    {
-    BModeNum := 3
-    }
-
-If BorderlessEnabled = True
-    {
-    BorderlessEnabled = True
-    BCloseChecked := "Checked"
-} else {
-    BorderlessEnabled = False
-    BCloseChecked =
-    }
-
-;Check for updates?
-
-If CheckForUpdates = True
-    {
-    CheckForUpdates = True
-    UpdateChecker := "Checked"
-} else {
-    CheckForUpdates = False
-    UpdateChecker =
-    }
-
-;FOC and WFC need differing delays before engaging borderless due to load times.
-
-
-If FOCDelay = nil
-    {
-    FOCDelay = 10
-    }
-
-
-If WFCDelay = nil
-    {
-    WFCDelay = 15
-    }
-    
-    
-;Check WFC and FOC paths in ini
-
-CfgPath := "TransGame\Config\PC\Cooked"
-
-if (WFCPath = 0 or WFCPath = nil) {
-    WFCList := "Launch WFC once first"
-    WFCCFGSel := 1
-    WFCFirst := True
-    } else {
-    Tag := "WFC"
-    WFCFirst := False
-    gosub ConfigRead
-    }
-
-
-
-
-if (FOCPath = 0 or FOCPath = nil) {
-    FOCList := "Launch FOC once first"
-    FOCCFGSel := 1
-    FOCFirst := True
-    } else {
-    Tag := "FOC"
-    FOCFirst := False
-    gosub ConfigRead
-    }
-    
-WFCCfgPath = %WFCPath%%CfgPath%
-FOCCfgPath = %FOCPath%%CfgPath%
+gosub ValueFixer
 
 
     
@@ -241,10 +142,15 @@ This tool helps you launch the Steam versions of War For Cybertron and Fall Of C
 
 Click the Help button on the main window for more info! But the quick rundown is:
 
-1. Make sure the .reg files are in the same location as the launcher. Original names given to you by the bot.
-2. Borderless mode requires the games to be in windowed mode, not fullscreen mode
+1. Make sure the .reg files are in the regs folder next to the launcher. Original names given to you by the bot. Launcher will assist you if it can't find it, with some passive agressiveness.
+
+2. Borderless mode requires the games to be in windowed mode, not fullscreen mode. Mode1 is more likely to work, though has tearing in 2d Sprites (UI and cursor). Mode2 has a spotty record for many.
+
 3. WFC and FOC have different load times, adjust the delay for borderless accordingly
+
 4. Shortcuts have been created next to the launcher for quickly launching into the games. This'll also use the borderless options configured in the launcher!
+
+5. During the initial launching of either game, it will launch the game and then kill it. And then relaunch it. This is for it to know where the game is for fixing up the Coalsced.ini.
 
 ~Sora Hjort
 )
@@ -254,44 +160,32 @@ Click the Help button on the main window for more info! But the quick rundown is
 
 HelpBlock =
 (
-This launcher still needs you to grab the Coalesced.ini from the Discord Server.
+This launcher will download the Coalesced.ini for you automatically.
 
-The reg files "%WFCReg%" and "%FOCReg%" must be in the same folder as the launcher. The launcher will yell at you if you did not do this.
+The Launcher will help/yell at you on where to put the .reg files when you go to launch a game.
 
 The Borderless mode does require you to run the game in windowed mode.
 
+Borderless Mode1 is generally more reliable. It does result in 2D Sprites, such as UI elements and the Cursor to have some tearing. 3D rendering seems unaffected.
+
+Borderless Mode2 has been known to work less often for a variety of people. But the tearing on the 2D elements do not occur.
+
 WFC and FOC have differing load times, adjust the delay (in seconds) to fine tune when the borderless event triggers. When in doubt, increase the delay up to 20 or even 30 seconds to make sure it triggers.
 
-You can also trigger the borderless while the game is running by attempting to run the shortcuts or pressing one of the launch buttons. It will not launch a second instance of the game.
+You can also trigger the borderless while the game is running by attempting to run the shortcuts or pressing the related launch button. It will not launch a second instance of the game.
 
 If you wish to launch the games through this launcher through Steam, you will have to add the launcher as a non-steam game. And if you wish for it to launch straight into a specific game, add "WFC" or "FOC" without quotes as the launch option to have it launch directly into that specific game.
 
-When in doubt, look at the properties of the shortcuts.
+When in doubt, look at the properties of the created shortcuts.
 
-Note: If you're running the AHK script version of the launcher instead of the EXE, you will have steam add any other program. Then you'll have to edit the properties of the entry to direct to the script.
+Coalsced.ini switching. The launcher will read the list of Coalsced.ini in the configs folder and populate the two dropdown lists. All WFC ini have the prefix of "WFC.". And "FOC." for FOC. They can be any name as long as they have those prefix and ".ini" at the end.
+
+On launch it will copy the file over to the game's config folder. This is useful if you want to switch between cosemetic mods.
+
+When in doubt use the ReEnergized inis.
+
+Note: If you're running the AHK script version of the launcher instead of the EXE, you will have steam add an exe first. Then you'll have to edit the properties of the entry to direct to the script.
 )
-
-
-;Launcher main text
-
-TxtBlock =
-(
-Welcome to the ReEnergized Launcher Helper for Steam!
-
-Make sure you have the .reg files inthe same folder as this program. They need to be the same name as they were given to you by the bot!
-
-If you have not, then please go follow the instructions in the install guide. It's over on the discord server!
-
-P.S. This launcher and the registry files can be stored anywhere, as long as they're in the same folder!
-
-Signed Sora Hjort
-
-
-
-Select the game you wish to launch!
-)
-
-
 
 ;Create the Gui!
 
@@ -354,8 +248,9 @@ If (First != "A")
     gosub FinishGui
     Gui, First:new,,First ReEnergized
     gui, color, 0x000000
+    Gui, add, picture, +Center xm224 ym32 w512 BackgroundTrans,  imgs/matrixdim.png
     Gui, Font, s16 c39ff14, Arial
-    Gui, Add, Text,w960 wrap BackgroundTrans, %FirstBlock%
+    Gui, Add, Text, xm0 ym0 w960 wrap BackgroundTrans, %FirstBlock%
     Gui, First:Show, xcenter ycenter 
     } else {
     gosub FinishGui
@@ -541,13 +436,116 @@ IniRead, WFCPath, %ini%, Launch, WFCPath, 0
 return
 
 
+;Fixing all the values
+
+ValueFixer:
+
+;Auto Close?
+
+
+
+If AutoClose = True
+    {
+    AutoClose = True
+    ACloseChecked := "Checked"
+} else {
+    AutoClose = False
+    ACloseChecked =
+    }
+
+
+;Borderless Mode enabled?
+
+If Borderless = Disabled
+    {
+    BModeNum := 1
+    }
+If Borderless = 0
+    {
+    BModeNum := 1
+    }
+If Borderless = Mode1
+    {
+    BModeNum := 2
+    }
+If Borderless = Mode2
+    {
+    BModeNum := 3
+    }
+
+If BorderlessEnabled = True
+    {
+    BorderlessEnabled = True
+    BCloseChecked := "Checked"
+} else {
+    BorderlessEnabled = False
+    BCloseChecked =
+    }
+
+;Check for updates?
+
+If CheckForUpdates = True
+    {
+    CheckForUpdates = True
+    UpdateChecker := "Checked"
+} else {
+    CheckForUpdates = False
+    UpdateChecker =
+    }
+
+;FOC and WFC need differing delays before engaging borderless due to load times.
+
+
+If FOCDelay = nil
+    {
+    FOCDelay = 10
+    }
+
+
+If WFCDelay = nil
+    {
+    WFCDelay = 15
+    }
+    
+    
+;Check WFC and FOC paths in ini
+
+CfgPath := "TransGame\Config\PC\Cooked"
+
+if (WFCPath = 0 or WFCPath = nil) {
+    WFCList := "Launch WFC once first"
+    WFCCFGSel := 1
+    WFCFirst := True
+    } else {
+    Tag := "WFC"
+    WFCFirst := False
+    gosub ConfigRead
+    }
+
+
+
+
+if (FOCPath = 0 or FOCPath = nil) {
+    FOCList := "Launch FOC once first"
+    FOCCFGSel := 1
+    FOCFirst := True
+    } else {
+    Tag := "FOC"
+    FOCFirst := False
+    gosub ConfigRead
+    }
+    
+WFCCfgPath = %WFCPath%%CfgPath%
+FOCCfgPath = %FOCPath%%CfgPath%
+
+return
+
 ;Read controls
 
 Read:
 
 Gui, Main:Submit, NoHide
 
-;MsgBox %FOCConfig% %FOCDelay% %WFCDelay%
     If (AutoCloseTester = 0)
         {
         AutoClose = False
@@ -555,7 +553,7 @@ Gui, Main:Submit, NoHide
         AutoClose = True
         }
 
-;GuiControlGet, BEnableTester,, BEnable
+
     If (BEnable = 0)
         {
         BorderlessEnabled = False
@@ -680,7 +678,8 @@ kill the game, then relaunch it for you.
 This should only occur during the first launch of
 %StubLong%. If this occurs after that, 
 it just means the launcher's config ran into a
-slight error during a previous launch.
+slight error during a previous launch. It should
+hopefully fix itself in time for the next launch.
 
 Anyway!
 
@@ -751,17 +750,6 @@ FileCopy, %FOCCfgPath%\Coalesced.ini, %A_ScriptDir%\configs\FOC.Backup.ini
 sleep 50
 FileCopy, %WFCCfgPath%\Coalesced.ini, %A_ScriptDir%\configs\WFC.Backup.ini
 
-BackupBlock =
-(
-The old Coalesced.ini files for WFC and FOC
-have been backed up. They'll show up in the
-dropdown boxes labeled as "backup".
-
-Sorry if you see this message multiple times.
-The backup process can be a little finicky a
-few times.
-)
-;MsgBox %BackupBlock%
 return
 
 
@@ -790,13 +778,10 @@ Loop, ./configs/%Tag%*.ini
             FOCList = %FOCList%|%A_LoopFileName%
             AddCfg = %A_LoopFileName%
             FOCArray.push(AddCfg)
-            ;msgbox 1 %AddCfg%
-            ;msgbox % FOCArray[A_Index]
             } else {
             FOCList = %FOCList%%A_LoopFileName%
             AddCfg = %A_LoopFileName%
             FOCArray.push(AddCfg)
-            ;msgbox 2 %AddCfg%
             }
     }
     if (Tag = "WFC") {
@@ -804,19 +789,16 @@ Loop, ./configs/%Tag%*.ini
             WFCList = %WFCList%|%A_LoopFileName%
             AddCfg = %A_LoopFileName%
             WFCArray.push(AddCfg)
-            ;msgbox 3 %AddCfg%
             } else {
             WFCList = %WFCList%%A_LoopFileName%
             AddCfg = %A_LoopFileName%
             WFCArray.push(AddCfg)
-            ;msgbox 4 %AddCfg%
             }
         }
     
     CountWithMe++
 }
 
-;MsgBox %CountWithMe%
 
 If CountWithMe <= 0
     {
@@ -858,11 +840,9 @@ If (Tag = "FOC") {
     FOCArray.push("!/:FOC.Overwrite.Off:\!")
     loop % FOCArray.length()
         {
-        ;msgbox 1
         FOCTest = % FOCArray[A_Index]
         FOCCFGNum++
         if (FOCTest = FOCConfig) {
-            ;msgbox 2
             FOCCFGSel := FOCCFGNum
             }
         if (FOCTest = FOCCfgDef) {
@@ -870,17 +850,14 @@ If (Tag = "FOC") {
             }
         }
 }
-;msgbox test %FOCCFGSel%
 If (FOCCFGSel = "")
     {
     FOCCFGSel := FOCCFGDefSel
-    ;MsgBox FOCTest %FOCCFGSel%
     }
     
 If (WFCCFGSel = "")
     {
     WFCCFGSel := WFCCFGDefSel
-    ;MsgBox WFCTest %WFCCFGSel%
     }
 
 return
@@ -890,7 +867,6 @@ return
 FirstRun:
 FileCreateDir, ./configs
 FileCreateDir, ./regs
-;gosub BackupConfigs
 gosub DownConfigs
 return
 
