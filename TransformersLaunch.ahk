@@ -6,19 +6,25 @@ FileInstall, imgs/matrixdim.png, imgs/matrixdim.png
 FileInstall, imgs/matrix.ico, imgs/matrix.ico
 
 #SingleInstance off
+DetectHiddenWindows On
 SendMode Input
 SetWorkingDir %A_ScriptDir%
 SetTitleMatchMode 2
 ;Script by Sora Hjort
 
-version := 20220701.175800
+version := 20220701.224000
 
 nil := ""
 
 Launch = %1%
 
+If (IcoImg == "A")
+    {
+    menu, tray, icon, imgs/matrix.ico
+    }
 menu, tray, nostandard
 menu, tray, add, E&xit,FIN
+Menu, tray, Tip, ReEnergized Steam Launcher - By Sora Hjort
 
 
 ;	Restart script in admin mode if needed.
@@ -26,16 +32,38 @@ menu, tray, add, E&xit,FIN
 	full_command_line := DllCall("GetCommandLine", "str")
 
 if not (A_IsAdmin or RegExMatch(full_command_line, " /restart(?!\S)"))
-{
-    try
     {
-        if A_IsCompiled
-            Run *RunAs "%A_ScriptFullPath%" %1% /restart
-        else
-            Run *RunAs "%A_AhkPath%" /restart "%A_ScriptFullPath%" %1%
-    }
-    ExitApp
-}
+        try
+        {
+            if A_IsCompiled
+                Run *RunAs "%A_ScriptFullPath%" %1% /restart
+            else
+                Run *RunAs "%A_AhkPath%" /restart "%A_ScriptFullPath%" %1%
+        }
+        ExitApp
+    } Else {	
+		SetTitleMatchMode 2
+		WinGet, Instances, List, ReEnergized Steam Launcher - By Sora Hjort
+		Loop %Instances%
+		{
+			If ( Instances%A_Index% != A_ScriptHwnd )
+                InstantBlock =
+                (
+                Previous instance of the launcher detected
+                
+                Would you like to close the previous instance?
+                )
+                MsgBox, 4,Old Instance Detected, %InstantBlock%
+                IfMsgBox Yes
+                    {
+                    WinClose, % "ahk_id " Instances%A_Index% 
+                    } Else {
+                    WinActivate, % "ahk_id " Instances%A_Index% 
+                    ExitApp
+                    }
+		}
+	
+	}
 
 
 
@@ -205,7 +233,7 @@ Cybertron
 WFCReg := "tfcwfc_pc.reg"
 FOCReg := "tfcfoc_pc.reg"
 
-Gui, Main:New, ,ReEnergized Steam Launcher
+Gui, Main:New, ,ReEnergized Steam Launcher - By Sora Hjort
 Gui, Margin ,0,0
 Gui, add, picture, xm0 ym0 w960 h540 BackgroundTrans, imgs/TFLaunchGUI.png
 
@@ -271,7 +299,7 @@ FinishGui:
     
     gui, Main:Add, CheckBox, xm750 ym150 vUpdateEnable %UpdateChecker%, Check updates daily?
     
-    Gui, Main:Show, xcenter ycenter h130 AutoSize, ReEnergized Steam Launcher
+    Gui, Main:Show, xcenter ycenter h130 AutoSize, ReEnergized Steam Launcher - By Sora Hjort
 return
 
 
@@ -298,8 +326,7 @@ StubLong := "War For Cybertron"
 WFCSub:
 WFCCfgPath = %WFCPath%%CfgPath%
 WFCRegPath = regs/%WFCReg%
-if !FileExist(WFCRegPath)
-    {
+if !FileExist(WFCRegPath) {
     gosub MissingReg
     return
     }
@@ -315,13 +342,19 @@ if FileExist(WFCRegPath) {
     WinActivate %game%
     #If WinActive(%game%)
         {
-        if (Borderless == "Mode1" or Borderless == "Mode2")
+        If (WFCFirst != True)
             {
-            sleep, %SecMult%
-            gosub Borderless%Borderless%
+            Gui, Launch:Destroy
+            if (Borderless == "Mode1" or Borderless == "Mode2")
+                {
+                sleep, %SecMult%
+                gosub Borderless%Borderless%
+                }
             }
         }
     gosub Save
+    gosub FirstRestart
+    msgbox WFCtesttest
     return
     }
 return
@@ -355,13 +388,20 @@ if FileExist(FOCRegPath) {
     WinActivate %game%
     #If WinActive(%game%)
         {
-        if (Borderless == "Mode1" or Borderless == "Mode2")
+        If (FOCFirst != True)
             {
-            sleep, %SecMult%
-            gosub Borderless%Borderless%
+            Gui, Launch:Destroy
+            if (Borderless == "Mode1" or Borderless == "Mode2")
+                {
+                sleep, %SecMult%
+                gosub Borderless%Borderless%
+                }
             }
         }
     gosub Save
+    gosub FirstRestart
+    msgbox FOCtesttest
+    return
     }
 return
 gosub EOF
@@ -675,6 +715,7 @@ if (Stub = "FOC")
         FOCConfig := FOCCfgDef
         FOCCFGNum := 2
         RestartQ := True
+        RestartMe := True
         goto FOCSub
         return
         }
@@ -693,12 +734,12 @@ if (Stub = "WFC")
         WFCConfig := WFCCfgDef
         WFCCFGNum := 2
         RestartQ := True
+        RestartMe := True
         goto WFCSub
         return
         }
     }
     WinActivate, %game%
-    Gui, Launch:Destroy
 if (AutoCloseTester = 1)
         {
         gui, Main:Hide
@@ -748,7 +789,7 @@ and the .ini extension.
 )
 
 Gui, Launch:new
-Gui, +AlwaysOnTop -caption
+Gui, -caption
 gui, font,s16
 Gui, add, text,, %FirstBlock%
 gui, Launch:show
@@ -943,7 +984,7 @@ bring itself infront of the game.
 This should only occur this one time from launching
 %StubLong%. 
 )
-    MsgBox, %RestartBlock%
+    ;MsgBox, %RestartBlock%
     try
     {
         if A_IsCompiled
