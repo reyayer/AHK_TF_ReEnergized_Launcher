@@ -12,7 +12,7 @@ SetWorkingDir %A_ScriptDir%
 SetTitleMatchMode 2
 ;Script by Sora Hjort
 
-version := 20220701.224000
+version := 20220702.003400
 
 nil := ""
 
@@ -86,20 +86,7 @@ gosub ValueFixer
 
     
 
-;Launch Parameters
-    
-if (Launch == "FOC" or Launch == "foc") {
-    gosub FOC
-    gosub FIN
-    return
-    }
-
-if (Launch == "WFC" or Launch == "wfc") {
-    gosub WFC
-    gosub FIN
-    return
-    }
-    
+  
     
 First := FileExist("TFLaunch.ini")
 MainImg := FileExist("imgs/TFLaunchGUI.png")
@@ -299,6 +286,21 @@ FinishGui:
     
     gui, Main:Add, CheckBox, xm750 ym150 vUpdateEnable %UpdateChecker%, Check updates daily?
     
+    ;Launch Parameters
+    
+if (Launch == "FOC" or Launch == "foc") {
+    
+    gosub FOC
+    gosub FIN
+    return
+    }
+
+if (Launch == "WFC" or Launch == "wfc") {
+    gosub WFC
+    gosub FIN
+    return
+    }
+    
     Gui, Main:Show, xcenter ycenter h130 AutoSize, ReEnergized Steam Launcher - By Sora Hjort
 return
 
@@ -354,7 +356,7 @@ if FileExist(WFCRegPath) {
         }
     gosub Save
     gosub FirstRestart
-    msgbox WFCtesttest
+    msgbox If you see this message, please inform Sora. Code: WFC.FR
     return
     }
 return
@@ -400,7 +402,7 @@ if FileExist(FOCRegPath) {
         }
     gosub Save
     gosub FirstRestart
-    msgbox FOCtesttest
+    msgbox If you see this message, please inform Sora. Code: FOC.FR
     return
     }
 return
@@ -683,12 +685,10 @@ if (Stub = "FOC" or Stub = "WFC")
 if (WFCPath < 53 and WFCPathBak >= 53)
     {
     WFCPath := WFCPathBak
-    MsgBox WFCBak
     }
 if (FOCPath < 53 and FOCPathBak >= 53)
     {
     FOCPath := FOCPathBak
-    MsgBox FOCBak
     }
     
 StringReplace, Borderless, Borderless, %BCut%,,
@@ -821,9 +821,9 @@ This message will disappear when the
 downloads are completed.
 )
 Gui, Down:New
-Gui, Font, s16
-Gui, add, text,, %DownBlock%
-Gui, show
+Gui, Down:Font, s16
+Gui, Down:add, text,, %DownBlock%
+Gui, Down:show
 UrlDownloadToFile, https://wiki.aiwarehouse.xyz/guides/tfcwfc_pc_guide/coalesced.ini, ./configs/WFC.ReEnergized.ini
 UrlDownloadToFile, https://wiki.aiwarehouse.xyz/guides/tfcfoc_guide/coalesced.ini, ./configs/FOC.ReEnergized.ini
 Gui, Down:Destroy
