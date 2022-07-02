@@ -1,4 +1,4 @@
-﻿WinClose, % "ahk_id " Instances%A_Index%
+WinClose, % "ahk_id " Instances%A_Index%
 
 ;@Ahk2Exe-SetMainIcon matrix.ico
 FileInstall, imgs/TFLaunchGUI.png, imgs/TFLaunchGUI.png
@@ -12,7 +12,7 @@ SetWorkingDir %A_ScriptDir%
 SetTitleMatchMode 2
 ;Script by Sora Hjort
 
-version := 20220702.003400
+version := 20220702.005000
 
 nil := ""
 
@@ -988,7 +988,7 @@ This should only occur this one time from launching
     try
     {
         if A_IsCompiled
-            Run *RunAs "%A_ScriptFullPath%" %1% /restart
+            Run *RunAs "%A_ScriptFullPath%" /restart
         else
             Run *RunAs "%A_AhkPath%" /restart "%A_ScriptFullPath%" %1%
     }
