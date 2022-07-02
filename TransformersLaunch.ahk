@@ -11,7 +11,7 @@ SetWorkingDir %A_ScriptDir%
 SetTitleMatchMode 2
 ;Script by Sora Hjort
 
-version := 20220701.010800
+version := 20220701.175800
 
 nil := ""
 
@@ -260,11 +260,15 @@ Return
 
 FinishGui:
     Gui, Main:Font, s12
+    
     gui, Main:add, DropDownList, vWFCConfig xm750 ym10 w200 Choose%WFCCFGSel%, %WFCList%
+    
     gui, Main:add, DropDownList, vFOCConfig xm750 ym50 w200 Choose%FOCCFGSel%, %FOCList%
+    
     gui, Add, DropDownList, vBorderless Choose%BModeNum% xm750 ym90 w200 , Borderless Disabled|Borderless Mode1|Borderless Mode2
     
     gui, Add, CheckBox, xm750 ym130 vAutoCloseTester %ACloseChecked% , Auto-Close Launcher?
+    
     gui, Main:Add, CheckBox, xm750 ym150 vUpdateEnable %UpdateChecker%, Check updates daily?
     
     Gui, Main:Show, xcenter ycenter h130 AutoSize, ReEnergized Steam Launcher
@@ -311,7 +315,7 @@ if FileExist(WFCRegPath) {
     WinActivate %game%
     #If WinActive(%game%)
         {
-        if (Borderless != "Disabled")
+        if (Borderless == "Mode1" or Borderless == "Mode2")
             {
             sleep, %SecMult%
             gosub Borderless%Borderless%
@@ -351,7 +355,7 @@ if FileExist(FOCRegPath) {
     WinActivate %game%
     #If WinActive(%game%)
         {
-        if (Borderless != "Disabled")
+        if (Borderless == "Mode1" or Borderless == "Mode2")
             {
             sleep, %SecMult%
             gosub Borderless%Borderless%
@@ -362,7 +366,7 @@ if FileExist(FOCRegPath) {
 return
 gosub EOF
 
-Borderless:
+Borderless0:
 
 
     ;WinMove, %game%, , 0, 0, A_ScreenWidth, A_ScreenHeight
@@ -422,23 +426,79 @@ return
 ;Read the Ini Files
 
 IniReader:
-IniRead, FOCPath, %ini%, Launch, FOCPath, 0
-IniRead, WFCConfig, %ini%, launch, WFCConfig, "WFC.ReEnergized.ini"
-IniRead, FOCConfig, %ini%, launch, FOCConfig, "FOC.ReEnergized.ini"
-IniRead, LastCheck, %ini%, Update, LastCheck, 0
-IniRead, CheckForUpdates, %ini%, Update, CheckForUpdates, 0
-IniRead, AutoClose, %ini%, Launch, AutoClose, True
-IniRead, BorderlessEnabled, %ini%, Launch, BorderlessEnabled, 0
-IniRead, Borderless, %ini%, Launch, Borderless, 0
-IniRead, FOCDelay, %ini%, Launch, FOCDelay, 10
+IniRead, WFCPath, %ini%, Launch, WFCPath,
+IniRead, FOCPath, %ini%, Launch, FOCPath,
+
+IniRead, WFCConfig, %ini%, launch, WFCConfig, WFC.ReEnergized.ini
+IniRead, FOCConfig, %ini%, launch, FOCConfig, FOC.ReEnergized.ini
+
 IniRead, WFCDelay, %ini%, Launch, WFCDelay, 15
-IniRead, WFCPath, %ini%, Launch, WFCPath, 0
+IniRead, FOCDelay, %ini%, Launch, FOCDelay, 10
+
+IniRead, LastCheck, %ini%, Update, LastCheck, 0
+    
+IniRead, CheckForUpdates, %ini%, Update, CheckForUpdates, False
+IniRead, AutoClose, %ini%, Launch, AutoClose, True
+
+    
+IniRead, Borderless, %ini%, Launch, Borderless, Disabled
+
+
+
+
+
+TestCheck = 
+(
+CheckForUpdates: %CheckForUpdates%
+AutoClose: %AutoClose%
+Borderless: %Borderless%
+____
+FOCPath: %FOCPath%
+FOCConfig: %FOCConfig%
+____
+WFCPath: %WFCPath%
+WFCConfig: %WFCConfig%
+
+)
+
+;msgbox %TestCheck%
 return
 
 
 ;Fixing all the values
 
 ValueFixer:
+
+;Invalid Value Error Preventions 
+if StrLen(WFCPath) >= 53
+    {
+    WFCPathBak := WFCPath
+    }
+
+if StrLen(FOCPath) >= 53
+    {
+    FOCPathBak := FOCPath
+    }
+
+if WFCDelay is not number
+    {
+    WFCDelay := 15
+    }
+if FOCDelay is not number
+    {
+    FOCDelay := 10
+    }
+
+if LastCheck is not number
+    {
+    LastCheck := 0
+    }
+    
+if (AutoClose != True or AutoClose != False)
+    {
+    AutoClose := "True"
+    }
+
 
 ;Auto Close?
 
@@ -456,30 +516,17 @@ If AutoClose = True
 
 ;Borderless Mode enabled?
 
-If Borderless = Disabled
+If (Borderless == "Disabled")
     {
     BModeNum := 1
-    }
-If Borderless = 0
-    {
+    } else if (Borderless = 0 or Borderless = nil) {
     BModeNum := 1
-    }
-If Borderless = Mode1
-    {
+    } else if (Borderless == "Mode1") {
     BModeNum := 2
-    }
-If Borderless = Mode2
-    {
+    } else if (Borderless == "Mode2") {
     BModeNum := 3
-    }
-
-If BorderlessEnabled = True
-    {
-    BorderlessEnabled = True
-    BCloseChecked := "Checked"
-} else {
-    BorderlessEnabled = False
-    BCloseChecked =
+    } else {
+    BModeNum := 1
     }
 
 ;Check for updates?
@@ -512,7 +559,7 @@ If WFCDelay = nil
 
 CfgPath := "TransGame\Config\PC\Cooked"
 
-if (WFCPath = 0 or WFCPath = nil) {
+if (WFCPath = 0 or WFCPath = nil or WFCPath == "ERROR") {
     WFCList := "Launch WFC once first"
     WFCCFGSel := 1
     WFCFirst := True
@@ -525,7 +572,7 @@ if (WFCPath = 0 or WFCPath = nil) {
 
 
 
-if (FOCPath = 0 or FOCPath = nil) {
+if (FOCPath = 0 or FOCPath = nil or FOCPath == "ERROR") {
     FOCList := "Launch FOC once first"
     FOCCFGSel := 1
     FOCFirst := True
@@ -537,6 +584,8 @@ if (FOCPath = 0 or FOCPath = nil) {
     
 WFCCfgPath = %WFCPath%%CfgPath%
 FOCCfgPath = %FOCPath%%CfgPath%
+
+
 
 return
 
@@ -553,13 +602,6 @@ Gui, Main:Submit, NoHide
         AutoClose = True
         }
 
-
-    If (BEnable = 0)
-        {
-        BorderlessEnabled = False
-        } else {
-        BorderlessEnabled = True
-        }
 
     If (UpdateEnable = 0)
         {
@@ -597,9 +639,20 @@ if (Stub = "FOC" or Stub = "WFC")
 
     IniWrite, %GamePath%, %ini%, Launch, %Stub%Path
     }
+    
+if (WFCPath < 53 and WFCPathBak >= 53)
+    {
+    WFCPath := WFCPathBak
+    MsgBox WFCBak
+    }
+if (FOCPath < 53 and FOCPathBak >= 53)
+    {
+    FOCPath := FOCPathBak
+    MsgBox FOCBak
+    }
+    
 StringReplace, Borderless, Borderless, %BCut%,,
     
-IniWrite, %BorderlessEnabled%, %ini%, Launch, BorderlessEnabled
 IniWrite, %Borderless%, %ini%, Launch, Borderless
 IniWrite, %WFCDelay%, %ini%, Launch, WFCDelay
 IniWrite, %FOCDelay%, %ini%, Launch, FOCDelay
