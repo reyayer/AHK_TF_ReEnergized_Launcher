@@ -1,4 +1,11 @@
-WinClose, % "ahk_id " Instances%A_Index%
+﻿WinClose, % "ahk_id " Instances%A_Index%
+
+
+/*
+
+To Do:
+
+*/
 
 ;@Ahk2Exe-SetMainIcon matrix.ico
 FileInstall, imgs/TFLaunchGUI.png, imgs/TFLaunchGUI.png
@@ -12,12 +19,12 @@ SetWorkingDir %A_ScriptDir%
 SetTitleMatchMode 2
 ;Script by Sora Hjort
 
-version := 20220702.005000
+version := 20220714.125500
 
 nil := ""
 
 Launch = %1%
-
+IcoImg := FileExist("imgs/matrix.ico")
 If (IcoImg == "A")
     {
     menu, tray, icon, imgs/matrix.ico
@@ -80,18 +87,21 @@ If (VerFile < version)
     
 ;Read the ini and fix any erroneous values.
 ini = %A_ScriptDir%\TFLaunch.ini
-gosub IniReader
-gosub ValueFixer
 
-
-    
-
-  
-    
+REWFC := FileExist("configs/WFC.ReEnergized.ini")
+REFOC := FileExist("configs/FOC.ReEnergized.ini")
+WFCBak := FileExist("configs/WFC.Backup.ini")
+FOCBak := FileExist("configs/FOC.Backup.ini")
 First := FileExist("TFLaunch.ini")
 MainImg := FileExist("imgs/TFLaunchGUI.png")
 DimImg := FileExist("imgs/matrixdim.png")
 IcoImg := FileExist("imgs/matrix.ico")
+FOCFirst := True
+WFCFirst := True
+
+
+gosub IniReader
+gosub ValueFixer
 
 IfNotExist, ./imgs
     {
@@ -235,7 +245,7 @@ Gui, Add, Text, xm345 ym500 , (In Seconds)
 
 Gui, Add, Button, xm+170 ym+460 w150 h70 gWFC , %WFCBlock%
 
-Gui, Add, Edit,  w70 xm410 ym470 h30 +Center
+Gui, Add, Edit,  w70 xm410 ym467 h30 +Center
 Gui, Add, UpDown, vWFCDelay range0-100 wrap, %WFCDelay%
 
 
@@ -244,7 +254,7 @@ Gui, Add, Text, xm665 ym500 , (In Seconds)
 
 Gui, Add, Button, xm+490 ym+460 w150 h70 gFOC , %FOCBlock%
 
-Gui, Add, Edit,  w70 xm730 ym470 h30 +Center
+Gui, Add, Edit,  w70 xm730 ym467 h30 +Center
 Gui, Add, UpDown, vFOCDelay range0-100 wrap, %FOCDelay%
 
 Gui, Add, Button, xm+810 ym+460 w140 h70 gCancel , &Close
@@ -280,22 +290,23 @@ FinishGui:
     
     gui, Main:add, DropDownList, vFOCConfig xm750 ym50 w200 Choose%FOCCFGSel%, %FOCList%
     
-    gui, Add, DropDownList, vBorderless Choose%BModeNum% xm750 ym90 w200 , Borderless Disabled|Borderless Mode1|Borderless Mode2
+    gui, Main:Add, DropDownList, vBorderless Choose%BModeNum% xm750 ym90 w200 , Borderless Disabled|Borderless Mode1|Borderless Mode2
     
-    gui, Add, CheckBox, xm750 ym130 vAutoCloseTester %ACloseChecked% , Auto-Close Launcher?
+    gui, Main:Add, CheckBox, xm750 ym130 vAutoCloseTester %ACloseChecked% , Auto-Close Launcher?
     
     gui, Main:Add, CheckBox, xm750 ym150 vUpdateEnable %UpdateChecker%, Check updates daily?
     
     ;Launch Parameters
     
-if (Launch == "FOC" or Launch == "foc") {
-    
+if (Launch == "FOC" or Launch == "foc")
+    {    
     gosub FOC
     gosub FIN
     return
     }
 
-if (Launch == "WFC" or Launch == "wfc") {
+if (Launch == "WFC" or Launch == "wfc")
+    {
     gosub WFC
     gosub FIN
     return
@@ -323,12 +334,16 @@ WFC:
 gosub Read
 SecMult := WFCDelay * 1000
 game := "ahk_exe TWFC.exe"
+class := "ahk_class LaunchUnrealUWindowsClient"
 Stub := "WFC"
 StubLong := "War For Cybertron"
 WFCSub:
 WFCCfgPath = %WFCPath%%CfgPath%
+CheckPath := WFCCfgPath
+gosub CheckSum
 WFCRegPath = regs/%WFCReg%
-if !FileExist(WFCRegPath) {
+if !FileExist(WFCRegPath)
+    {
     gosub MissingReg
     return
     }
@@ -336,9 +351,18 @@ If (WFCFirst = True)
     {
     gosub FirstLaunch
     }
-if FileExist(WFCRegPath) {
-    FileCopy, %A_ScriptDir%\configs\%WFCConfig%, %WFCCfgPath%\Coalesced.ini, 1
-    run steam://run/42650
+if FileExist(WFCRegPath)
+    {
+    if (OverwriteCfg = true)
+        {
+        if (WFCBak != "A")
+            {
+            gosub BackupConfigs
+            }
+        gosub DownCheck
+        FileCopy, %A_ScriptDir%\configs\%WFCConfig%, %WFCCfgPath%\Coalesced.ini, 1
+        }
+    runwait steam://run/42650
     WinWait %game%
     RunWait reg import %WFCRegPath%
     WinActivate %game%
@@ -369,12 +393,16 @@ FOC:
 gosub Read
 SecMult := FOCDelay * 1000
 game := "ahk_exe TFOC.exe"
+class := "ahk_class LaunchUnrealUWindowsClient"
 Stub := "FOC"
 StubLong := "Fall Of Cybertron"
 FOCSub:
 FOCCfgPath = %FOCPath%%CfgPath%
+CheckPath := FOCCfgPath
+gosub CheckSum
 FOCRegPath = regs/%FOCReg%
-if !FileExist(FOCRegPath) {
+if !FileExist(FOCRegPath)
+    {
     gosub MissingReg
     return
     }
@@ -382,13 +410,22 @@ If (FOCFirst = True)
     {
     gosub FirstLaunch
     }
-if FileExist(FOCRegPath) {
-    FileCopy, %A_ScriptDir%\configs\%FOCConfig%, %FOCCfgPath%\Coalesced.ini, 1
-    run steam://run/213120
+if FileExist(FOCRegPath)
+    {
+    if (OverwriteCfg = true)
+        {
+        if (FOCBak != "A")
+            {
+            gosub BackupConfigs
+            }
+        gosub DownCheck
+        FileCopy, %A_ScriptDir%\configs\%FOCConfig%, %FOCCfgPath%\Coalesced.ini, 1
+        }
+    runwait steam://run/213120
     WinWait %game%
-    Run reg import %FOCRegPath%
+    Runwait reg import %FOCRegPath%
     WinActivate %game%
-    #If WinActive(%game%)
+    #If WinActive(%game%) && (%class%)
         {
         If (FOCFirst != True)
             {
@@ -407,6 +444,39 @@ if FileExist(FOCRegPath) {
     }
 return
 gosub EOF
+
+CheckSum:
+
+if (Stub = "FOC" and FOCFirst != True)
+    {
+    runwait %ComSpec% /c certUtil -hashfile "%A_ScriptDir%\configs\%FOCConfig%" SHA256 > "%A_ScriptDir%\configs\FOCSel.SHA256",,hide
+    runwait %ComSpec% /c certUtil -hashfile "%FOCCfgPath%\Coalesced.ini" SHA256 > "%A_ScriptDir%\configs\FOCCur.SHA256",,hide
+    FileReadLine, FOCSel, %A_ScriptDir%\configs\FOCSel.SHA256,2
+    FileReadLine, FOCCur, %A_ScriptDir%\configs\FOCCur.SHA256,2
+    if (FOCSel != FOCCur)
+        {
+        OverwriteCfg := true
+        }
+    } else {
+    OverwriteCfg := true
+    }
+
+if (Stub = "WFC" and WFCFirst != True)
+    {
+    runwait %ComSpec% /c certUtil -hashfile "%A_ScriptDir%\configs\%WFCConfig%" SHA256 > "%A_ScriptDir%\configs\WFCSel.SHA256",,hide
+    runwait %ComSpec% /c certUtil -hashfile "%WFCCfgPath%\Coalesced.ini" SHA256 > "%A_ScriptDir%\configs\WFCCur.SHA256",,hide
+    FileReadLine, WFCSel, %A_ScriptDir%\configs\WFCSel.SHA256,2
+    FileReadLine, WFCCur, %A_ScriptDir%\configs\WFCCur.SHA256,2
+    if (WFCSel != WFCCur)
+        {
+        OverwriteCfg := true
+        }
+    } else {
+    OverwriteCfg := true
+    }
+    
+return
+
 
 Borderless0:
 
@@ -431,27 +501,26 @@ return
 
 BorderlessMode1:
 
-
-    WinMove, %game%, , 0, 0, A_ScreenWidth, A_ScreenHeight
-    WinSet, Style, 0x140A0000, %game%
-    WinSet, Style, -0xC00000, %game%
-    WinSet, Style, -0x800000, %game%
-    WinSet, Style, -0x40000, %game%
-    WinSet, Style, -0x400000, %game%
-    WinSet, Style, -0x0, %game%
-    WinSet, Style, -0x80880000, %game%
-    WinSet, Redraw,, %game%
+    WinMove, %class%, , 0, 0, A_ScreenWidth, A_ScreenHeight
+    WinSet, Style, 0x140A0000, %class%
+    WinSet, Style, -0xC00000, %class%
+    WinSet, Style, -0x800000, %class%
+    WinSet, Style, -0x40000, %class%
+    WinSet, Style, -0x400000, %class%
+    WinSet, Style, -0x0, %class%
+    WinSet, Style, -0x80880000, %class%
+    WinSet, Redraw,, %class%
+    WinActivate %class%
 
 return
 
 
 
 BorderlessMode2:
-
-    WinActivate %game%
-    WinSet, Style, -0xC40000, %game%
-    WinMove, %game%, , 0, 0, A_ScreenWidth, A_ScreenHeight
+    WinSet, Style, -0xC00000, %class%
+    WinMove, %class%, , 0, 0, A_ScreenWidth, A_ScreenHeight
     DllCall("SetMenu", "Ptr", WinExist(), "Ptr", 0)
+    WinActivate %class%
 
 return
 
@@ -484,9 +553,6 @@ IniRead, AutoClose, %ini%, Launch, AutoClose, True
 
     
 IniRead, Borderless, %ini%, Launch, Borderless, Disabled
-
-
-
 
 
 TestCheck = 
@@ -596,12 +662,12 @@ If WFCDelay = nil
     WFCDelay = 15
     }
     
-    
 ;Check WFC and FOC paths in ini
 
 CfgPath := "TransGame\Config\PC\Cooked"
 
-if (WFCPath = 0 or WFCPath = nil or WFCPath == "ERROR") {
+if (WFCPath = 0 or WFCPath = nil or WFCPath == "ERROR")
+    {
     WFCList := "Launch WFC once first"
     WFCCFGSel := 1
     WFCFirst := True
@@ -611,10 +677,8 @@ if (WFCPath = 0 or WFCPath = nil or WFCPath == "ERROR") {
     gosub ConfigRead
     }
 
-
-
-
-if (FOCPath = 0 or FOCPath = nil or FOCPath == "ERROR") {
+if (FOCPath = 0 or FOCPath = nil or FOCPath == "ERROR")
+    {
     FOCList := "Launch FOC once first"
     FOCCFGSel := 1
     FOCFirst := True
@@ -623,7 +687,6 @@ if (FOCPath = 0 or FOCPath = nil or FOCPath == "ERROR") {
     FOCFirst := False
     gosub ConfigRead
     }
-    
 WFCCfgPath = %WFCPath%%CfgPath%
 FOCCfgPath = %FOCPath%%CfgPath%
 
@@ -639,9 +702,9 @@ Gui, Main:Submit, NoHide
 
     If (AutoCloseTester = 0)
         {
-        AutoClose = False
+        AutoClose := False
         } else {
-        AutoClose = True
+        AutoClose := True
         }
 
 
@@ -685,10 +748,14 @@ if (Stub = "FOC" or Stub = "WFC")
 if (WFCPath < 53 and WFCPathBak >= 53)
     {
     WFCPath := WFCPathBak
+    } else if (WFCPath < 53 and WFCPathBak < 53) {
+    WFCFirst := True
     }
 if (FOCPath < 53 and FOCPathBak >= 53)
     {
     FOCPath := FOCPathBak
+    } else if (FOCPath < 53 and FOCPathBak < 53) {
+    FOCFirst := True
     }
     
 StringReplace, Borderless, Borderless, %BCut%,,
@@ -739,6 +806,7 @@ if (Stub = "WFC")
         return
         }
     }
+    WinWait %class%
     WinActivate, %game%
 if (AutoCloseTester = 1)
         {
@@ -812,6 +880,32 @@ return
 
 ;download the ReEnergized basic configs 
 
+DownCheck:
+DownYes := False
+
+If (REWFC != "A")
+    {
+    WFCDown := true
+    DownYes := true
+    }
+    
+If (REFOC != "A")
+    {
+    FOCDown := true
+    DownYes := true
+    }
+    
+If (DownYes = true)
+    {
+    gosub DownConfigs
+    }
+
+REWFC := FileExist("configs/WFC.ReEnergized.ini")
+REFOC := FileExist("configs/FOC.ReEnergized.ini")
+
+return
+
+
 DownConfigs:
 DownBlock =
 (
@@ -824,25 +918,47 @@ Gui, Down:New
 Gui, Down:Font, s16
 Gui, Down:add, text,, %DownBlock%
 Gui, Down:show
-UrlDownloadToFile, https://wiki.aiwarehouse.xyz/guides/tfcwfc_pc_guide/coalesced.ini, ./configs/WFC.ReEnergized.ini
-UrlDownloadToFile, https://wiki.aiwarehouse.xyz/guides/tfcfoc_guide/coalesced.ini, ./configs/FOC.ReEnergized.ini
+
+if (WFCDown = true)
+    {
+    UrlDownloadToFile, https://wiki.aiwarehouse.xyz/guides/tfcwfc_pc_guide/coalesced.ini, ./configs/WFC.ReEnergized.ini
+    }
+    
+If (FOCDown = true)
+    {
+    UrlDownloadToFile, https://wiki.aiwarehouse.xyz/guides/tfcfoc_guide/coalesced.ini, ./configs/FOC.ReEnergized.ini
+    }
+    
 Gui, Down:Destroy
 return
 
 ;Make a backup of the configs incase of overwriting concerns
 
 BackupConfigs:
+
 gosub IniReader
+
 WFCCfgPath = %WFCPath%%CfgPath%
 FOCCfgPath = %FOCPath%%CfgPath%
 sleep 50
-FileCopy, %FOCCfgPath%\Coalesced.ini, %A_ScriptDir%\configs\FOC.Backup.ini
-sleep 50
-FileCopy, %WFCCfgPath%\Coalesced.ini, %A_ScriptDir%\configs\WFC.Backup.ini
-sleep 50
-FileCopy, %FOCCfgPath%\Coalesced.ini, %A_ScriptDir%\configs\FOC.Backup.ini
-sleep 50
-FileCopy, %WFCCfgPath%\Coalesced.ini, %A_ScriptDir%\configs\WFC.Backup.ini
+
+FOCBackup:
+if (FOCFirst != True and FOCBak != "A")
+    {
+    FileCopy, %FOCCfgPath%\Coalesced.ini, %A_ScriptDir%\configs\FOC.Backup.ini
+    FOCBak := FileExist("configs/FOC.Backup.ini")
+    sleep 50
+    goto FOCBackup
+    }
+
+WFCBackup:
+if (WFCFirst != True and WFCBak != "A")
+    {
+    FileCopy, %WFCCfgPath%\Coalesced.ini, %A_ScriptDir%\configs\WFC.Backup.ini
+    WFCBak := FileExist("configs/WFC.Backup.ini")
+    sleep 50
+    goto WFCBackup
+    }
 
 return
 
@@ -850,7 +966,6 @@ return
 ;List the configs in the configs folder
 
 ConfigRead:
-
 FOCArray := []
 WFCArray := []
 
@@ -862,71 +977,69 @@ IfNotExist, ./configs
         FileCreateDir, ./configs
         }
 
+gosub DownCheck
+
 CountWithMe := 0
+FOCCWM := CountWithMe
+WFCCWM := CountWithMe
 
-
-Loop, ./configs/%Tag%*.ini
-{
-    If (Tag = "FOC") {
-        If (CountWithMe > 0) {
-            FOCList = %FOCList%|%A_LoopFileName%
-            AddCfg = %A_LoopFileName%
-            FOCArray.push(AddCfg)
-            } else {
-            FOCList = %FOCList%%A_LoopFileName%
-            AddCfg = %A_LoopFileName%
-            FOCArray.push(AddCfg)
+    Loop, ./configs/%Tag%*.ini
+        {
+        If (Tag = "FOC")
+            {
+            If (CountWithMe > 0)
+                {
+                FOCList = %FOCList%|%A_LoopFileName%
+                AddCfg = %A_LoopFileName%
+                FOCArray.push(AddCfg)
+                } else {
+                FOCList = %FOCList%%A_LoopFileName%
+                AddCfg = %A_LoopFileName%
+                FOCArray.push(AddCfg)
+                }
+            FOCCWM++
             }
-    }
-    if (Tag = "WFC") {
-        If (CountWithMe > 0) {
-            WFCList = %WFCList%|%A_LoopFileName%
-            AddCfg = %A_LoopFileName%
-            WFCArray.push(AddCfg)
-            } else {
-            WFCList = %WFCList%%A_LoopFileName%
-            AddCfg = %A_LoopFileName%
-            WFCArray.push(AddCfg)
+        if (Tag = "WFC")
+            {
+            If (CountWithMe > 0)
+                {
+                WFCList = %WFCList%|%A_LoopFileName%
+                AddCfg = %A_LoopFileName%
+                WFCArray.push(AddCfg)
+                } else {
+                WFCList = %WFCList%%A_LoopFileName%
+                AddCfg = %A_LoopFileName%
+                WFCArray.push(AddCfg)
+                }
+            WFCCWM++
             }
+        CountWithMe++
         }
+
+If (Tag = "WFC")
+    {
+    WFCList = %WFCList%|<--------------------->
+    WFCArray.push("<--------------------->")
     
-    CountWithMe++
-}
-
-
-If CountWithMe <= 0
-    {
-    FileCreateDir, ./configs
-    gosub DownConfigs
-    goto ConfigRead
-    return
-    }
-
-If CountWithMe <= 1
-    {
-    FileCreateDir, ./configs
-    gosub BackupConfigs
-    goto ConfigRead
-    return
-    }
-
-If (Tag = "WFC") {
     WFCList = %WFCList%|!/:WFC.Overwrite.Off:\!
     WFCArray.push("!/:WFC.Overwrite.Off:\!")
     loop % WFCArray.length()
         {
         WFCTest = % WFCArray[A_Index]
         WFCCFGNum++
-        if (WFCTest = WFCConfig) {
+        if (WFCTest = WFCConfig)
+            {
             WFCCFGSel := WFCCFGNum
             }
-        if (WFCTest = WFCCfgDef) {
+        if (WFCTest = WFCCfgDef)
+            {
             WFCCFGDefSel := WFCCFGNum
             }
         }
-}
+    }
 
-If (Tag = "FOC") {
+If (Tag = "FOC")
+    {
     FOCList = %FOCList%|<--------------------->
     FOCArray.push("<--------------------->")
     
@@ -936,14 +1049,17 @@ If (Tag = "FOC") {
         {
         FOCTest = % FOCArray[A_Index]
         FOCCFGNum++
-        if (FOCTest = FOCConfig) {
+        if (FOCTest = FOCConfig)
+            {
             FOCCFGSel := FOCCFGNum
             }
-        if (FOCTest = FOCCfgDef) {
+        if (FOCTest = FOCCfgDef)
+            {
             FOCCFGDefSel := FOCCFGNum
             }
         }
-}
+    }
+
 If (FOCCFGSel = "")
     {
     FOCCFGSel := FOCCFGDefSel
@@ -953,6 +1069,21 @@ If (WFCCFGSel = "")
     {
     WFCCFGSel := WFCCFGDefSel
     }
+    
+iniLoop := True
+if (WFCFirst != True and WFCBak != "A")
+    {
+    gosub BackupConfigs
+    goto ConfigRead
+    return
+    }
+    
+if (FOCFirst != True and FOCBak != "A")
+    {
+    gosub BackupConfigs
+    goto ConfigRead
+    return
+    }    
 
 return
 
@@ -961,12 +1092,15 @@ return
 FirstRun:
 FileCreateDir, ./configs
 FileCreateDir, ./regs
+DownYes := True
 gosub DownConfigs
 return
 
 
 
 ;Exit
+LaunchGuiClose:
+LaunchGuiEscape:
 MainGuiClose:
 MainGuiEscape:
 FIN:
@@ -996,6 +1130,7 @@ This should only occur this one time from launching
 
 
 MissingReg:
+FileCreateDir, ./regs
 run, explorer .\regs
 WinWaitActive, ahk_exe explorer.exe
 WinMove,,, 0, 0, 600, 600
