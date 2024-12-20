@@ -31,7 +31,7 @@ If (IcoImg == "A")
     }
 menu, tray, nostandard
 menu, tray, add, E&xit,FIN
-Menu, tray, Tip, ReEnergized Steam Launcher - By Sora Hjort
+Menu, tray, Tip, Warehouse Steam Launcher - By Sora Hjort
 
 
 ;	Restart script in admin mode if needed.
@@ -50,7 +50,7 @@ if not (A_IsAdmin or RegExMatch(full_command_line, " /restart(?!\S)"))
         ExitApp
     } Else {	
 		SetTitleMatchMode 2
-		WinGet, Instances, List, ReEnergized Steam Launcher - By Sora Hjort
+		WinGet, Instances, List, Warehouse Steam Launcher - By Sora Hjort
 		Loop %Instances%
 		{
 			If ( Instances%A_Index% != A_ScriptHwnd )
@@ -88,8 +88,8 @@ If (VerFile < version)
 ;Read the ini and fix any erroneous values.
 ini = %A_ScriptDir%\TFLaunch.ini
 
-REWFC := FileExist("configs/WFC.ReEnergized.ini")
-REFOC := FileExist("configs/FOC.ReEnergized.ini")
+REWFC := FileExist("configs/WFC.Warehouse.ini")
+REFOC := FileExist("configs/FOC.Warehouse.ini")
 WFCBak := FileExist("configs/WFC.Backup.ini")
 FOCBak := FileExist("configs/FOC.Backup.ini")
 First := FileExist("TFLaunch.ini")
@@ -139,7 +139,7 @@ if (LastCheck < time)
     {
     If CheckForUpdates = True
         {
-        UrlDownloadToFile, https://raw.githubusercontent.com/SoraHjort/AHK_TF_ReEnergized_Launcher/main/version, ./updateCheck
+        UrlDownloadToFile, https://raw.githubusercontent.com/SoraHjort/AHK_TF_Warehouse_Launcher/main/version, ./updateCheck
         FileReadLine, updateCheck, ./updateCheck, 1
         FileDelete, ./updateCheck
         If (version < updateCheck)
@@ -163,7 +163,7 @@ FirstBlock =
 (
 This appears to be the first time you've ran this! Or the ini got deleted.
 
-This tool helps you launch the Steam versions of War For Cybertron and Fall Of Cybertron, for playing on the ReEnergized server! This is because the Steam version likes to overwrite the CD Key whenever you launch it. This launcher helps solve this issue by launching the game and then running the registry file automatically!
+This tool helps you launch the Steam versions of War For Cybertron and Fall Of Cybertron, for playing on the Warehouse server! This is because the Steam version likes to overwrite the CD Key whenever you launch it. This launcher helps solve this issue by launching the game and then running the registry file automatically!
 
 Click the Help button on the main window for more info! But the quick rundown is:
 
@@ -207,7 +207,7 @@ Coalsced.ini switching. The launcher will read the list of Coalsced.ini in the c
 
 On launch it will copy the file over to the game's config folder. This is useful if you want to switch between cosemetic mods.
 
-When in doubt use the ReEnergized inis.
+When in doubt use the Warehouse inis.
 
 Note: If you're running the AHK script version of the launcher instead of the EXE, you will have steam add an exe first. Then you'll have to edit the properties of the entry to direct to the script.
 )
@@ -230,7 +230,7 @@ Cybertron
 WFCReg := "tfcwfc_pc.reg"
 FOCReg := "tfcfoc_pc.reg"
 
-Gui, Main:New, ,ReEnergized Steam Launcher - By Sora Hjort
+Gui, Main:New, ,Warehouse Steam Launcher - By Sora Hjort
 Gui, Margin ,0,0
 Gui, add, picture, xm0 ym0 w960 h540 BackgroundTrans, imgs/TFLaunchGUI.png
 
@@ -271,7 +271,7 @@ If (First != "A")
     {
     gosub FirstRun
     gosub FinishGui
-    Gui, First:new,,First ReEnergized
+    Gui, First:new,,First Warehouse
     gui, color, 0x000000
     Gui, add, picture, +Center xm224 ym32 w512 BackgroundTrans,  imgs/matrixdim.png
     Gui, Font, s16 c39ff14, Arial
@@ -312,7 +312,7 @@ if (Launch == "WFC" or Launch == "wfc")
     return
     }
     
-    Gui, Main:Show, xcenter ycenter h130 AutoSize, ReEnergized Steam Launcher - By Sora Hjort
+    Gui, Main:Show, xcenter ycenter h130 AutoSize, Warehouse Steam Launcher - By Sora Hjort
 return
 
 
@@ -540,8 +540,8 @@ IniReader:
 IniRead, WFCPath, %ini%, Launch, WFCPath,
 IniRead, FOCPath, %ini%, Launch, FOCPath,
 
-IniRead, WFCConfig, %ini%, launch, WFCConfig, WFC.ReEnergized.ini
-IniRead, FOCConfig, %ini%, launch, FOCConfig, FOC.ReEnergized.ini
+IniRead, WFCConfig, %ini%, launch, WFCConfig, WFC.Warehouse.ini
+IniRead, FOCConfig, %ini%, launch, FOCConfig, FOC.Warehouse.ini
 
 IniRead, WFCDelay, %ini%, Launch, WFCDelay, 15
 IniRead, FOCDelay, %ini%, Launch, FOCDelay, 10
@@ -728,11 +728,11 @@ Gui, Main:Submit, NoHide
 
 if (WFCConfig = "Launch WFC once first")
     {
-    WFCConfig := "WFC.ReEnergized.ini"
+    WFCConfig := "WFC.Warehouse.ini"
     }
 if (FOCConfig = "Launch FOC once first")
     {
-    FOCConfig := "FOC.ReEnergized.ini"
+    FOCConfig := "FOC.Warehouse.ini"
     }
 
 if (Stub = "FOC" or Stub = "WFC")
@@ -866,19 +866,19 @@ return
 ;Download sub sections
 
 DownMain:
-UrlDownloadToFile, https://github.com/SoraHjort/AHK_TF_ReEnergized_Launcher/raw/main/imgs/TFLaunchGUI.png, ./imgs/TFLaunchGui.png
+UrlDownloadToFile, https://github.com/SoraHjort/AHK_TF_Warehouse_Launcher/raw/main/imgs/TFLaunchGUI.png, ./imgs/TFLaunchGui.png
 return
 
 DownDim:
-UrlDownloadToFile, https://raw.githubusercontent.com/SoraHjort/AHK_TF_ReEnergized_Launcher/main/imgs/matrixdim.png, ./imgs/matrixdim.png
+UrlDownloadToFile, https://raw.githubusercontent.com/SoraHjort/AHK_TF_Warehouse_Launcher/main/imgs/matrixdim.png, ./imgs/matrixdim.png
 return
 
 DownIco:
-UrlDownloadToFile, https://raw.githubusercontent.com/SoraHjort/AHK_TF_ReEnergized_Launcher/main/imgs/matrix.ico, ./imgs/matrix.ico
+UrlDownloadToFile, https://raw.githubusercontent.com/SoraHjort/AHK_TF_Warehouse_Launcher/main/imgs/matrix.ico, ./imgs/matrix.ico
 menu, tray, icon, imgs/matrix.ico
 return
 
-;download the ReEnergized basic configs 
+;download the Warehouse basic configs 
 
 DownCheck:
 DownYes := False
@@ -900,8 +900,8 @@ If (DownYes = true)
     gosub DownConfigs
     }
 
-REWFC := FileExist("configs/WFC.ReEnergized.ini")
-REFOC := FileExist("configs/FOC.ReEnergized.ini")
+REWFC := FileExist("configs/WFC.Warehouse.ini")
+REFOC := FileExist("configs/FOC.Warehouse.ini")
 
 return
 
@@ -921,12 +921,12 @@ Gui, Down:show
 
 if (WFCDown = true)
     {
-    UrlDownloadToFile, https://wiki.aiwarehouse.xyz/guides/tfcwfc_pc_guide/coalesced.ini, ./configs/WFC.ReEnergized.ini
+    UrlDownloadToFile, https://wiki.aiwarehouse.xyz/guides/tfcwfc_pc_guide/newcoal/coalesced.ini ./configs/WFC.Warehouse.ini
     }
     
 If (FOCDown = true)
     {
-    UrlDownloadToFile, https://wiki.aiwarehouse.xyz/guides/tfcfoc_guide/coalesced.ini, ./configs/FOC.ReEnergized.ini
+    UrlDownloadToFile, https://wiki.aiwarehouse.xyz/guides/tfcfoc_guide/coalesced.ini, ./configs/FOC.Warehouse.ini
     }
     
 Gui, Down:Destroy
@@ -969,8 +969,8 @@ ConfigRead:
 FOCArray := []
 WFCArray := []
 
-WFCCfgDef := "WFC.ReEnergized.ini"
-FOCCfgDef := "FOC.ReEnergized.ini"
+WFCCfgDef := "WFC.Warehouse.ini"
+FOCCfgDef := "FOC.Warehouse.ini"
 
 IfNotExist, ./configs
         {
