@@ -1,4 +1,1 @@
-## AHK Luancher for the Steam version of the TF Warehouse project.
-A quick and simple launcher for the Warehouse project. Built with AHK
-
-This is a simple fork of Sora's launcher https://github.com/SoraHjort/AHK_TF_ReEnergized_Launcher to work with the modern set up of WFC
+This is no longer in use, was just a temporary fix while sana fixed the real issue.
